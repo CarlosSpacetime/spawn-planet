@@ -157,9 +157,9 @@ function GLBSpawner(path, x, y, z) {
                         object.material.map.anisotropy = 16;
                         object.material.map.needsUpdate = true;
                     }
+                    const cloned = object.clone();
+                    object.getWorldPosition(cloned.position);
                     if (object.material.emissive && (object.material.emissive.r > 0 || object.material.emissive.g > 0 || object.material.color.b > 0)) {
-                        const cloned = object.clone();
-                        object.getWorldPosition(cloned.position);
                         bloomScene.add(cloned);
                     }
                 }
@@ -170,7 +170,7 @@ function GLBSpawner(path, x, y, z) {
             scene.add(object.scene);
             let geometries = [];
             object.scene.traverse(object => {
-                if (object.geometry) {
+                if (object.geometry && object.visible) {
                     const cloned = object.geometry.clone();
                     cloned.applyMatrix4(object.matrixWorld);
                     for (const key in cloned.attributes) {
