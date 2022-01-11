@@ -202,7 +202,7 @@ function GLBSpawner(path, x, y, z) {
             scene.add(visualizer);
         }, onProgress, onError);
 };
-GLBSpawner('spawnplanet2.glb', 0, -20, 0);
+GLBSpawner('spawnplanet3.glb', 0, -20, 0);
 renderer = new THREE.WebGLRenderer();
 renderer.setPixelRatio(1);
 renderer.setSize(window.innerWidth, window.innerHeight);
