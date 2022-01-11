@@ -360,6 +360,10 @@ function updatePlayer(delta) {
 function animate() {
 
     requestAnimationFrame(animate);
+    if (player.position.y < -100) {
+        playerVelocity.set(0, 0, 0);
+        player.position.set(0, 30, -30);
+    }
     const delta = Math.min(clock.getDelta(), 0.1);
     if (keys[" "]) {
         if (playerIsOnGround) {
@@ -371,7 +375,6 @@ function animate() {
         updatePlayer(delta / 5);
 
     }
-
     const time = performance.now();
     dirLight.position.x = camera.position.x + 90;
     dirLight.position.y = 360;
