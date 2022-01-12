@@ -1,6 +1,7 @@
 import * as THREE from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70OdXl97VF/mode=imports/optimized/three.js';
 
 import { PointerLockControls } from 'https://threejs.org/examples/jsm/controls/PointerLockControls.js';
+import { RoundedBoxGeometry } from 'https://threejs.org/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { GLTFLoader } from 'https://threejs.org/examples/jsm/loaders/GLTFLoader.js';
 //import { Octree } from 'https://threejs.org/examples/jsm/math/Octree.js';
 import { Capsule } from 'https://threejs.org/examples/jsm/math/Capsule.js';
@@ -31,8 +32,11 @@ import {
 import {
     FogShader
 } from "./FogShader.js";
-import { Octree } from "./Octree.js";
+import {
+    AOShader
+} from "./AOShader.js";
 import { MeshBVH, MeshBVHVisualizer } from './three-mesh-bvh.js';
+import Stats from "./stats.js";
 
 let camera, scene, renderer, controls;
 
@@ -45,7 +49,7 @@ let moveBackward = false;
 let moveLeft = false;
 let moveRight = false;
 let canJump = false;
-
+let keys = {};
 let prevTime = performance.now();
 let movement_speed = 400.0;
 let dirLight;
@@ -54,181 +58,199 @@ const velocity = new THREE.Vector3();
 const direction = new THREE.Vector3();
 const vertex = new THREE.Vector3();
 const color = new THREE.Color();
+const clock = new THREE.Clock();
 let collider;
 let visualizer;
 let mergedGeometry;
-init();
-const keys = {};
+camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+camera.position.y = 1.6;
+camera.lookAt(0, 1.7, -1);
+scene = new THREE.Scene();
+scene.background = new THREE.Color(0x69e6f4);
+scene.fog = new THREE.Fog(0x69e6f4, 1600, 2000);
+const light = new THREE.HemisphereLight(0xffeeff, 0x777788, 1);
+light.position.set(0.5, 1, 0.75);
+scene.add(light);
+dirLight = new THREE.DirectionalLight(0x8888ff, 1);
+dirLight.position.set(90, 360, 170 * 3);
+dirLight.castShadow = true;
+dirLight.shadow.camera.near = 0.1;
+dirLight.shadow.camera.far = 1000;
+dirLight.shadow.camera.right = 400;
+dirLight.shadow.camera.left = -400;
+dirLight.shadow.camera.top = 400;
+dirLight.shadow.camera.bottom = -400;
+dirLight.shadow.mapSize.width = 1024;
+dirLight.shadow.mapSize.height = 1024;
+dirLight.shadow.radius = 4;
+dirLight.shadow.bias = -0.005;
+scene.add(dirLight);
+scene.add(dirLight.target);
+const player = new THREE.Mesh(
+    new RoundedBoxGeometry(1.0, 40.0, 1.0, 10, 5),
+    new THREE.MeshStandardMaterial()
+);
+player.geometry.translate(0, -10, 0);
+player.capsuleInfo = {
+    radius: 2.5,
+    segment: new THREE.Line3(new THREE.Vector3(), new THREE.Vector3(0, -20.0, 0.0))
+};
+player.visible = false;
+player.position.y = 30;
+player.position.z = -30;
+scene.add(player);
 
-function init() {
+controls = new PointerLockControls(camera, document.body);
+const stats = new Stats();
+stats.showPanel(0);
+document.body.appendChild(stats.dom);
+const blocker = document.getElementById('blocker');
+const instructions = document.getElementById('instructions');
+const flyout = document.getElementById('fly-out');
 
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-    camera.position.y = 1.6;
-    camera.lookAt(0, 1.7, -1);
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x69e6f4);
-    scene.fog = new THREE.Fog(0x69e6f4, 1600, 2000);
-    const light = new THREE.HemisphereLight(0xffeeff, 0x777788, 1);
-    light.position.set(0.5, 1, 0.75);
-    scene.add(light);
-    dirLight = new THREE.DirectionalLight(0x8888ff, 1);
-    dirLight.position.set(90, 360, 170 * 3);
-    dirLight.castShadow = true;
-    dirLight.shadow.camera.near = 0.1;
-    dirLight.shadow.camera.far = 1000;
-    dirLight.shadow.camera.right = 400;
-    dirLight.shadow.camera.left = -400;
-    dirLight.shadow.camera.top = 400;
-    dirLight.shadow.camera.bottom = -400;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    dirLight.shadow.radius = 4;
-    dirLight.shadow.bias = -0.0005;
-    scene.add(dirLight);
-    scene.add(dirLight.target);
-    const helper = new THREE.CameraHelper(dirLight.shadow.camera);
-    //scene.add(helper);
-    controls = new PointerLockControls(camera, document.body);
+instructions.addEventListener('click', function() {
+    controls.lock();
 
-    const blocker = document.getElementById('blocker');
-    const instructions = document.getElementById('instructions');
-    const flyout = document.getElementById('fly-out');
+});
 
-    instructions.addEventListener('click', function() {
-        controls.lock();
+controls.addEventListener('lock', function() {
+    flyout.innerHTML = 'ESC To Return'
+    instructions.style.display = 'none';
+    blocker.style.display = 'none';
+});
 
-    });
+controls.addEventListener('unlock', function() {
+    flyout.innerHTML = 'Back To Map'
+    blocker.style.display = 'block';
+    instructions.style.display = '';
 
-    controls.addEventListener('lock', function() {
-        flyout.innerHTML = 'ESC To Return'
-        instructions.style.display = 'none';
-        blocker.style.display = 'none';
-    });
+});
 
-    controls.addEventListener('unlock', function() {
-        flyout.innerHTML = 'Back To Map'
-        blocker.style.display = 'block';
-        instructions.style.display = '';
+scene.add(controls.getObject());
 
-    });
+const onKeyDown = function(event) {
+    keys[event.key] = true;
+};
 
-    scene.add(controls.getObject());
+const onKeyUp = function(event) {
+    keys[event.key] = false;
+};
 
-    const onKeyDown = function(event) {
-        keys[event.key] = true;
-    };
+document.addEventListener('keydown', onKeyDown);
+document.addEventListener('keyup', onKeyUp);
 
-    const onKeyUp = function(event) {
-        keys[event.key] = false;
-    };
+window.addEventListener('keydown', (e) => {
+    if (e.keyCode === 32 && e.target === document.body) {
+        e.preventDefault();
+    }
+});
 
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
+function onProgress(xr) { console.log((xr.loaded / xr.total) * 100) }
 
-    window.addEventListener('keydown', (e) => {
-        if (e.keyCode === 32 && e.target === document.body) {
-            e.preventDefault();
-        }
-    });
+function onError(e) { console.log(e) };
 
-    raycaster = new THREE.Raycaster(new THREE.Vector3(), new THREE.Vector3(0, -1, 0), 0, 10);
+function GLBSpawner(path, x, y, z) {
+    const loader = new GLTFLoader();
+    loader.load(
+        path,
+        function(object) {
+            object.scene.position.set(x, y, z);
+            object.scene.traverse(object => {
+                if (object.isMesh) {
+                    object.castShadow = true;
+                    object.receiveShadow = true;
+                    object.material.roughness = 1;
+                    if (object.material.map) {
+                        object.material.map.anisotropy = 16;
+                        object.material.map.needsUpdate = true;
+                    }
+                    const cloned = object.clone();
+                    object.getWorldPosition(cloned.position);
+                    if (object.material.emissive && (object.material.emissive.r > 0 || object.material.emissive.g > 0 || object.material.color.b > 0)) {
+                        bloomScene.add(cloned);
+                    }
+                }
+                if (object.isLight) {
+                    object.parent.remove(object);
+                }
+            });
+            scene.add(object.scene);
+            let geometries = [];
+            object.scene.traverse(object => {
+                if (object.geometry && object.visible) {
+                    const cloned = object.geometry.clone();
+                    cloned.applyMatrix4(object.matrixWorld);
+                    for (const key in cloned.attributes) {
 
-    function onProgress(xr) { console.log((xr.loaded / xr.total) * 100) }
+                        if (key !== 'position') {
 
-    function onError(e) { console.log(e) };
+                            cloned.deleteAttribute(key);
 
-    function GLBSpawner(path, x, y, z) {
-        const loader = new GLTFLoader();
-        loader.load(
-            path,
-            function(object) {
-                object.scene.position.set(x, y, z);
-                worldOctree.fromGraphNode(object.scene);
-                object.scene.traverse(object => {
-                    if (object.isMesh) {
-                        object.castShadow = true;
-                        object.receiveShadow = true;
-                        object.material.roughness = 1;
-                        if (object.material.emissive && (object.material.emissive.r > 0 || object.material.emissive.g > 0 || object.material.color.b > 0)) {
-                            const cloned = object.clone();
-                            object.getWorldPosition(cloned.position);
-                            bloomScene.add(cloned);
                         }
+
                     }
-                    if (object.isLight) {
-                        object.parent.remove(object);
-                    }
-                });
-                scene.add(object.scene);
-                let geometries = [];
-                object.scene.traverse(object => {
-                    if (object.geometry) {
-                        const cloned = object.geometry.clone();
-                        cloned.applyMatrix4(object.matrixWorld);
-                        for (const key in cloned.attributes) {
 
-                            if (key !== 'position') {
+                    geometries.push(cloned);
+                }
+            });
+            mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries, false);
+            mergedGeometry.boundsTree = new MeshBVH(mergedGeometry, { lazyGeneration: false });
+            collider = new THREE.Mesh(mergedGeometry);
+            collider.material.wireframe = true;
+            collider.material.opacity = 0.5;
+            collider.material.transparent = true;
+            collider.visible = false;
+            scene.add(collider);
 
-                                cloned.deleteAttribute(key);
+            visualizer = new MeshBVHVisualizer(collider, 10);
+            visualizer.visible = false;
+            visualizer.update();
 
-                            }
+            scene.add(visualizer);
+        }, onProgress, onError);
+};
+GLBSpawner('spawnplanet4.glb', 0, -20, 0);
+renderer = new THREE.WebGLRenderer();
+renderer.setPixelRatio(1);
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.VSMShadowMap;
 
-                        }
+document.body.appendChild(renderer.domElement);
+const composer = new EffectComposer(renderer);
+const bloomPass = new(class BloomPass extends ShaderPass {})(BloomShader);
+const boxBlur = new(class BlurPass extends ShaderPass {})(BoxBlurShader);
+const bloomAddPass = new(class AddPass extends ShaderPass {})(BloomAddShader);
+const aoPass = new ShaderPass(AOShader);
+const fogPass = new ShaderPass(FogShader);
+// Postprocessing gets rid of MSAA so SMAA is used instead
+const smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
+const filmPass = new FilmPass(0.05, 0, 0, false);
+composer.addPass(bloomPass);
+composer.addPass(boxBlur);
+composer.addPass(bloomAddPass);
+composer.addPass(aoPass);
+//composer.addPass(fogPass);
+//composer.addPass(filmPass);
+composer.addPass(smaaPass);
 
-                        geometries.push(cloned);
-                    }
-                });
-                mergedGeometry = BufferGeometryUtils.mergeBufferGeometries(geometries, false);
-                mergedGeometry.boundsTree = new MeshBVH(mergedGeometry, { lazyGeneration: false });
-                collider = new THREE.Mesh(mergedGeometry);
-                collider.material.wireframe = true;
-                collider.material.opacity = 0.5;
-                collider.material.transparent = true;
-                collider.visible = false;
-                scene.add(collider);
+// Full Scene Render Target
+const defaultTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.NearestFilter
+});
+defaultTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
+// Bloom Scene (Only Glowing Objects) Render Target
+const bloomTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+    minFilter: THREE.LinearFilter,
+    magFilter: THREE.NearestFilter
+});
+bloomTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
 
-                visualizer = new MeshBVHVisualizer(collider, 10);
-                visualizer.visible = false;
-                visualizer.update();
-
-                scene.add(visualizer);
-            }, onProgress, onError);
-    };
-    GLBSpawner('spawnplanet.glb', 0, -10, 0);
-
-
-
-    renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio(1);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.VSMShadowMap;
-
-    document.body.appendChild(renderer.domElement);
-
-    //
-
-    window.addEventListener('resize', onWindowResize);
-
-}
-
-function onWindowResize() {
-
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
-
-    renderer.setSize(window.innerWidth, window.innerHeight);
-
-}
-const playerCollider = new Capsule(new THREE.Vector3(0, 0.35, 0), new THREE.Vector3(0, 15, 0), 0.35);
-playerCollider.translate(new THREE.Vector3(0, 10, 0));
+let playerIsOnGround;
 const playerVelocity = new THREE.Vector3();
+const horizontalVelocity = new THREE.Vector3();
 const playerDirection = new THREE.Vector3();
-const clock = new THREE.Clock();
-const worldOctree = new Octree();
-
-const STEPS_PER_FRAME = 5;
-let playerOnFloor;
 
 function getForwardVector() {
 
@@ -251,122 +273,120 @@ function getSideVector() {
 
 }
 
-function updateControls(deltaTime) {
-
-    // gives a bit of air control
-    const speedDelta = deltaTime * (playerOnFloor ? 250 : 80);
-
+function updatePlayer(delta) {
+    playerVelocity.y += playerIsOnGround ? 0 : delta * -300;
+    player.position.addScaledVector(playerVelocity, delta);
     if (keys["w"]) {
 
-        playerVelocity.add(getForwardVector().multiplyScalar(speedDelta));
+        horizontalVelocity.add(getForwardVector().multiplyScalar(1 * delta));
 
     }
 
     if (keys["s"]) {
 
-        playerVelocity.add(getForwardVector().multiplyScalar(-speedDelta));
+        horizontalVelocity.add(getForwardVector().multiplyScalar(-1 * delta));
 
     }
 
     if (keys["a"]) {
 
-        playerVelocity.add(getSideVector().multiplyScalar(-speedDelta));
+        horizontalVelocity.add(getSideVector().multiplyScalar(-1 * delta));
 
     }
 
     if (keys["d"]) {
 
-        playerVelocity.add(getSideVector().multiplyScalar(speedDelta));
+        horizontalVelocity.add(getSideVector().multiplyScalar(1 * delta));
 
     }
+    player.position.add(horizontalVelocity);
+    horizontalVelocity.multiplyScalar(0.99);
+    player.updateMatrixWorld();
+    const capsuleInfo = player.capsuleInfo;
+    const tempBox = new THREE.Box3();
+    const tempMat = new THREE.Matrix4();
+    const tempSegment = new THREE.Line3();
+    tempBox.makeEmpty();
+    tempMat.copy(collider.matrixWorld).invert();
+    tempSegment.copy(capsuleInfo.segment);
+    tempSegment.start.applyMatrix4(player.matrixWorld).applyMatrix4(tempMat);
+    tempSegment.end.applyMatrix4(player.matrixWorld).applyMatrix4(tempMat);
+    tempBox.expandByPoint(tempSegment.start);
+    tempBox.expandByPoint(tempSegment.end);
+    tempBox.min.addScalar(-capsuleInfo.radius);
+    tempBox.max.addScalar(capsuleInfo.radius);
+    const tempVector = new THREE.Vector3();
+    const tempVector2 = new THREE.Vector3();
+    collider.geometry.boundsTree.shapecast({
 
-    if (playerOnFloor) {
-        if (keys[' ']) {
+        intersectsBounds: box => box.intersectsBox(tempBox),
 
-            playerVelocity.y = 150;
+        intersectsTriangle: tri => {
+
+            // check if the triangle is intersecting the capsule and adjust the
+            // capsule position if it is.
+            const triPoint = tempVector;
+            const capsulePoint = tempVector2;
+
+            const distance = tri.closestPointToSegment(tempSegment, triPoint, capsulePoint);
+            if (distance < capsuleInfo.radius) {
+
+                const depth = capsuleInfo.radius - distance;
+                const direction = capsulePoint.sub(triPoint).normalize();
+
+                tempSegment.start.addScaledVector(direction, depth);
+                tempSegment.end.addScaledVector(direction, depth);
+
+            }
 
         }
 
+    });
+    const newPosition = tempVector;
+    newPosition.copy(tempSegment.start).applyMatrix4(collider.matrixWorld);
+
+    const deltaVector = tempVector2;
+    deltaVector.subVectors(newPosition, player.position);
+
+    playerIsOnGround = deltaVector.y > Math.abs(delta * playerVelocity.y * 0.25);
+    const offset = Math.max(0.0, deltaVector.length() - 1e-5);
+    deltaVector.normalize().multiplyScalar(offset);
+    player.position.add(deltaVector);
+    if (!playerIsOnGround) {
+
+        deltaVector.normalize();
+        playerVelocity.addScaledVector(deltaVector, -deltaVector.dot(playerVelocity));
+
+    } else {
+
+        playerVelocity.set(0, 0, 0);
+
     }
+    camera.position.copy(player.position);
 
 }
-const GRAVITY = 300;
-
-function updatePlayer(deltaTime) {
-
-    let damping = Math.exp(-4 * deltaTime) - 1;
-
-    if (!playerOnFloor) {
-
-        playerVelocity.y -= GRAVITY * deltaTime;
-
-        // small air resistance
-        damping *= 0.1;
-
-    }
-
-    playerVelocity.addScaledVector(playerVelocity, damping);
-
-    playerCollisions();
-    const deltaPosition = playerVelocity.clone().multiplyScalar(deltaTime);
-    playerCollider.translate(deltaPosition);
-
-    playerCollisions();
-
-    camera.position.copy(playerCollider.end);
-
-}
-
-function playerCollisions() {
-    const result = worldOctree.capsuleIntersect(playerCollider);
-    playerOnFloor = false;
-
-    if (result) {
-
-        playerOnFloor = result.normal.y > 0;
-
-        if (!playerOnFloor) {
-
-            playerVelocity.addScaledVector(result.normal, -result.normal.dot(playerVelocity));
-
-        }
-
-        playerCollider.translate(result.normal.multiplyScalar(result.depth));
-    }
-
-}
-const composer = new EffectComposer(renderer);
-const bloomPass = new(class BloomPass extends ShaderPass {})(BloomShader);
-const boxBlur = new(class BlurPass extends ShaderPass {})(BoxBlurShader);
-const bloomAddPass = new(class AddPass extends ShaderPass {})(BloomAddShader);
-const fogPass = new ShaderPass(FogShader);
-// Postprocessing gets rid of MSAA so SMAA is used instead
-const smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
-const filmPass = new FilmPass(0.05, 0, 0, false);
-composer.addPass(bloomPass);
-composer.addPass(boxBlur);
-composer.addPass(bloomAddPass);
-composer.addPass(fogPass);
-//composer.addPass(filmPass);
-composer.addPass(smaaPass);
-
-// Full Scene Render Target
-const defaultTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.NearestFilter
-});
-defaultTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
-// Bloom Scene (Only Glowing Objects) Render Target
-const bloomTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-    minFilter: THREE.LinearFilter,
-    magFilter: THREE.NearestFilter
-});
-bloomTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
 
 function animate() {
 
     requestAnimationFrame(animate);
+    stats.update();
+    if (player.position.y < -100) {
+        playerVelocity.set(0, 0, 0);
+        player.position.set(0, 30, -30);
+    }
+    const delta = Math.min(clock.getDelta(), 0.1);
+    if (keys[" "]) {
+        if (playerIsOnGround) {
+            playerVelocity.y = 150.0;
+        }
+    }
+    if (collider) {
+        for (let i = 0; i < 5; i++) {
 
+            updatePlayer(delta / 5);
+
+        }
+    }
     const time = performance.now();
     dirLight.position.x = camera.position.x + 90;
     dirLight.position.y = 360;
@@ -376,20 +396,6 @@ function animate() {
     dirLight.target.position.z = camera.position.z;
     dirLight.shadow.camera.updateProjectionMatrix();
     dirLight.updateMatrix();
-
-    if (controls.isLocked === true) {
-        const deltaTime = Math.min(0.05, clock.getDelta()) / STEPS_PER_FRAME;
-        for (let i = 0; i < STEPS_PER_FRAME; i++) {
-
-            updateControls(deltaTime);
-
-            updatePlayer(deltaTime);
-
-            //teleportPlayerIfOob();
-
-        }
-        let damping = Math.exp(-4 * deltaTime) - 1;
-    }
 
     prevTime = time;
 
@@ -413,6 +419,14 @@ function animate() {
     fogPass.uniforms["viewMatrixInv"].value = camera.matrixWorld;
     fogPass.uniforms["cameraPos"].value = camera.position;
     fogPass.uniforms["time"].value = performance.now() / 1000;
+    aoPass.uniforms["sceneDepth"].value = defaultTexture.depthTexture;
+    aoPass.uniforms["projectionMatrixInv"].value = camera.projectionMatrixInverse;
+    aoPass.uniforms["viewMatrixInv"].value = camera.matrixWorld;
+    aoPass.uniforms["viewMat"].value = camera.matrixWorldInverse;
+    aoPass.uniforms["projMat"].value = camera.projectionMatrix;
+    aoPass.uniforms["cameraPos"].value = camera.position;
+    aoPass.uniforms["time"].value = performance.now() / 1000;
+    aoPass.uniforms["resolution"].value = new THREE.Vector2(window.innerWidth, window.innerHeight);
     renderer.setRenderTarget(null);
     renderer.clear();
     // Render the full postprocessing stack
