@@ -40,7 +40,7 @@ import {
 } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/shaders/FXAAShader.js';
 import { MeshBVH, MeshBVHVisualizer } from './three-mesh-bvh.js';
 import Stats from "./stats.js";
-
+import localProxy from "./localProxy.js";
 let camera, scene, renderer, controls, player, stats, raycaster;
 let composer, bloomPass, boxBlur, bloomAddPass, aoPass, fogPass, smaaPass, fxaaPass, filmPass, renderPass, bloomTexture, defaultTexture;
 let playerIsOnGround, playerVelocity, horizontalVelocity, playerDirection;
@@ -285,7 +285,7 @@ function GLBSpawner(path, x, y, z) {
         scene.add(visualizer);
     }, onProgress, onError);
 };
-GLBSpawner('spawnplanet4.glb', 0, -20, 0);
+GLBSpawner('spawnplanet.glb', 0, -20, 0);
 
 function getForwardVector() {
     camera.getWorldDirection(playerDirection);
@@ -531,9 +531,11 @@ const MEDIUM = 1;
 const HIGH = 2;
 const ULTRA = 3;
 const graphics = document.getElementById("graphics");
-let graphicTier = 0;
+let graphicTier = localProxy.tier !== undefined ? localProxy.tier : 0;
+graphics.innerHTML = "Graphics: " + settings[graphicTier];
 graphics.onclick = () => {
     graphicTier += 1;
+    localProxy.tier = graphicTier;
     graphicTier %= settings.length;
     graphics.innerHTML = "Graphics: " + settings[graphicTier];
 }
