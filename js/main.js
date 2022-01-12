@@ -79,7 +79,6 @@ function init() {
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.VSMShadowMap;
-
     document.body.appendChild(renderer.domElement);
 
     // ===== scene =====
@@ -168,7 +167,6 @@ function init() {
 
     // ===== controls =====
     controls = new PointerLockControls(camera, document.body);
-
     controls.addEventListener('lock', function() {
         flyout.innerHTML = 'ESC To Return'
         instructions.style.display = 'none';
