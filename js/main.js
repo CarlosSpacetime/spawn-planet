@@ -179,15 +179,14 @@ function init() {
 
         const model1 = SkeletonUtils.clone( gltf.scene );
 
-        const mixer1 = new THREE.AnimationMixer( model1 );
+        mixer = new THREE.AnimationMixer( model1 );
 
-        mixer1.clipAction( gltf.animations[ 2 ] ).play(); // idle
+        mixer.clipAction( gltf.animations[ 2 ] ).play(); // idle
 
         model1.position.z = - 175;
         model1.position.y = - 9
 
         scene.add(model1);
-        mixer = mixer1;
 
         animate();
 
@@ -506,7 +505,10 @@ function animate() {
     }
 
     const delta = Math.min(clock.getDelta(), 0.1);
-    mixer.update( delta );
+    if(typeof mixer !== 'undefined'){
+        mixer.update( delta );
+    }
+    
     
     if (keys[" "]) {
         if (playerIsOnGround) {
