@@ -22,25 +22,25 @@ import * as BufferGeometryUtils from 'https://cdn.skypack.dev/three@0.135.0/exam
 
 import {
     BloomShader
-} from "./BloomShader.js";
+} from "./render/BloomShader.js";
 import {
     BoxBlurShader
-} from "./BoxBlurShader.js";
+} from "./render/BoxBlurShader.js";
 import {
     BloomAddShader
-} from './BloomAddShader.js';
+} from './render/BloomAddShader.js';
 import {
     FogShader
-} from "./FogShader.js";
+} from "./render/FogShader.js";
 import {
     AOShader
-} from "./AOShader.js";
+} from "./render/AOShader.js";
 import {
     FXAAShader
 } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/shaders/FXAAShader.js';
-import { MeshBVH, MeshBVHVisualizer } from './three-mesh-bvh.js';
-import Stats from "./stats.js";
-import localProxy from "./localProxy.js";
+import { MeshBVH, MeshBVHVisualizer } from './util/three-mesh-bvh.js';
+import Stats from "./util/stats.js";
+import localProxy from "./util/localProxy.js";
 let camera, scene, renderer, controls, player, stats, raycaster, dirLight, collider, visualizer, mergedGeometry;
 let composer, bloomPass, boxBlur, bloomAddPass, aoPass, fogPass, smaaPass, fxaaPass, filmPass, renderPass, bloomTexture, defaultTexture;
 let playerIsOnGround, playerVelocity, horizontalVelocity, playerDirection;
