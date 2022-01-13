@@ -113,7 +113,13 @@ function init() {
     dirLight.shadow.mapSize.width = 1024;
     dirLight.shadow.mapSize.height = 1024;
     dirLight.shadow.radius = 4;
-    dirLight.shadow.bias = -0.005;
+    if (graphicTier === MEDIUM) {
+        dirLight.shadow.bias = -0.005;
+    } else if (graphicTier === HIGH) {
+        dirLight.shadow.bias = -0.0025;
+    } else {
+        dirLight.shadow.bias = -0.001;
+    }
     scene.add(dirLight);
     scene.add(dirLight.target);
 
@@ -488,7 +494,7 @@ function updateDirLight(size) {
     if (graphicTier === MEDIUM) {
         dirLight.shadow.bias = -0.005;
     } else if (graphicTier === HIGH) {
-        dirLight.shadow.bias = -0.002;
+        dirLight.shadow.bias = -0.0025;
     } else {
         dirLight.shadow.bias = -0.001;
     }
