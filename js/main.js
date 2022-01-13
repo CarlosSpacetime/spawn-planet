@@ -156,16 +156,16 @@ function init() {
 
     // ===== player =====
     player = new THREE.Mesh(
-        new RoundedBoxGeometry(1.0, 40.0, 1.0, 10, 5),
+        new RoundedBoxGeometry(1.0, 27, 1.0, 10, 5),
         new THREE.MeshStandardMaterial()
     );
-    player.geometry.translate(0, -10, 0);
+    player.geometry.translate(0, -27, 0);
     player.capsuleInfo = {
-        radius: 2.5,
-        segment: new THREE.Line3(new THREE.Vector3(), new THREE.Vector3(0, -20.0, 0.0))
+        radius: 5,
+        segment: new THREE.Line3(new THREE.Vector3(), new THREE.Vector3(0, -27, 0.0))
     };
     player.visible = false;
-    player.position.y = 30;
+    player.position.y = 50;
     player.position.z = -30;
     scene.add(player);
 
@@ -175,22 +175,26 @@ function init() {
 
     // ===== avatar =====
     const loader = new GLTFLoader();
-    loader.load( '../glb/y_bot.glb', function ( gltf ) {
+    loader.load('../glb/y_bot.glb', function(gltf) {
 
-        const model1 = SkeletonUtils.clone( gltf.scene );
+        const model1 = SkeletonUtils.clone(gltf.scene);
+        model1.traverse(child => {
+            if (child.isMesh) {
+                child.castShadow = true;
+                child.receiveShadow = true;
+            }
+        })
+        mixer = new THREE.AnimationMixer(model1);
 
-        mixer = new THREE.AnimationMixer( model1 );
+        mixer.clipAction(gltf.animations[2]).play(); // idle
 
-        mixer.clipAction( gltf.animations[ 2 ] ).play(); // idle
-
-        model1.position.z = - 175;
-        model1.position.y = - 9
+        model1.position.z = -175;
+        model1.position.y = -9
 
         scene.add(model1);
 
-        animate();
 
-    } );
+    });
 
 
     // ===== controls =====
@@ -481,7 +485,13 @@ function updateDirLight(size) {
     dirLight.shadow.mapSize.width = size;
     dirLight.shadow.mapSize.height = size;
     dirLight.shadow.radius = 4;
-    dirLight.shadow.bias = -0.005;
+    if (graphicTier === MEDIUM) {
+        dirLight.shadow.bias = -0.005;
+    } else if (graphicTier === HIGH) {
+        dirLight.shadow.bias = -0.002;
+    } else {
+        dirLight.shadow.bias = -0.001;
+    }
     if (size !== 0) {
         scene.add(dirLight);
         scene.add(dirLight.target);
@@ -491,7 +501,7 @@ function updateDirLight(size) {
 function animate() {
 
     requestAnimationFrame(animate);
-	
+
 
     stats.update();
     frame++;
@@ -499,17 +509,17 @@ function animate() {
         setGraphicsSetting(graphicTier);
     }
     scene.fog.needsUpdate = true;
-    if (player.position.y < -100) {
+    if (player.position.y < -1000) {
         playerVelocity.set(0, 0, 0);
         player.position.set(0, 30, -30);
     }
 
     const delta = Math.min(clock.getDelta(), 0.1);
-    if(typeof mixer !== 'undefined'){
-        mixer.update( delta );
+    if (typeof mixer !== 'undefined') {
+        mixer.update(delta);
     }
-    
-    
+
+
     if (keys[" "]) {
         if (playerIsOnGround) {
             playerVelocity.y = 150.0;
