@@ -40,12 +40,14 @@ import {
     FXAAShader
 } from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/shaders/FXAAShader.js';
 import { MeshBVH, MeshBVHVisualizer } from './util/three-mesh-bvh.js';
+import { CapsuleEntity } from './entities/CapsuleEntity.js';
+import { Avatar } from "./entities/Avatar.js";
 import Stats from "./util/stats.js";
 import localProxy from "./util/localProxy.js";
 let camera, scene, renderer, controls, player, stats, raycaster, dirLight, collider, visualizer, mergedGeometry;
 let composer, bloomPass, boxBlur, bloomAddPass, aoPass, fogPass, smaaPass, fxaaPass, filmPass, renderPass, bloomTexture, defaultTexture;
-let playerIsOnGround, playerVelocity, horizontalVelocity, playerDirection, model, skeleton, mixer;
-
+let playerVelocity, playerDirection, model, skeleton, mixer;
+let entities = [];
 let moveForward = false;
 let moveBackward = false;
 let moveLeft = false;
@@ -54,6 +56,9 @@ let canJump = false;
 let keys = {};
 let prevTime = performance.now();
 let movement_speed = 400.0;
+let playerCapsule = new CapsuleEntity(5, 27);
+playerCapsule.position.y = 50;
+playerCapsule.position.z = -30;
 let frame = 0;
 let graphicTier = localProxy.tier !== undefined ? localProxy.tier : 0;
 const bloomScene = new THREE.Scene();
@@ -175,30 +180,31 @@ function init() {
     player.position.z = -30;
     scene.add(player);
 
-    playerVelocity = new THREE.Vector3();
-    horizontalVelocity = new THREE.Vector3();
     playerDirection = new THREE.Vector3();
 
     // ===== avatar =====
     const loader = new GLTFLoader();
     loader.load('../glb/y_bot.glb', function(gltf) {
 
-        const model1 = SkeletonUtils.clone(gltf.scene);
-        model1.traverse(child => {
-            if (child.isMesh) {
-                child.castShadow = true;
-                child.receiveShadow = true;
-            }
-        })
-        mixer = new THREE.AnimationMixer(model1);
+        /* const model1 = SkeletonUtils.clone(gltf.scene);
+         model1.traverse(child => {
+             if (child.isMesh) {
+                 child.castShadow = true;
+                 child.receiveShadow = true;
+             }
+         })
+         mixer = new THREE.AnimationMixer(model1);
 
-        mixer.clipAction(gltf.animations[2]).play(); // idle
+         mixer.clipAction(gltf.animations[2]).play(); // idle
 
-        model1.position.z = -175;
-        model1.position.y = -9
+         model1.position.z = -175;
+         model1.position.y = -9
 
-        scene.add(model1);
-
+         scene.add(model1);*/
+        const avatar = new Avatar(5, 27, gltf.scene, gltf.animations, scene);
+        avatar.position.y = 30;
+        avatar.position.z = 50;
+        entities.push(avatar);
 
     });
 
@@ -322,88 +328,23 @@ function getSideVector() {
 }
 
 function updatePlayer(delta) {
-    playerVelocity.y += playerIsOnGround ? 0 : delta * -300;
-    player.position.addScaledVector(playerVelocity, delta);
     if (keys["w"]) {
-        horizontalVelocity.add(getForwardVector().multiplyScalar(1 * delta));
+        playerCapsule.horizontalVelocity.add(getForwardVector().multiplyScalar(1 * delta));
     }
 
     if (keys["s"]) {
-        horizontalVelocity.add(getForwardVector().multiplyScalar(-1 * delta));
+        playerCapsule.horizontalVelocity.add(getForwardVector().multiplyScalar(-1 * delta));
     }
 
     if (keys["a"]) {
-        horizontalVelocity.add(getSideVector().multiplyScalar(-1 * delta));
+        playerCapsule.horizontalVelocity.add(getSideVector().multiplyScalar(-1 * delta));
     }
 
     if (keys["d"]) {
-        horizontalVelocity.add(getSideVector().multiplyScalar(1 * delta));
+        playerCapsule.horizontalVelocity.add(getSideVector().multiplyScalar(1 * delta));
     }
-
-    player.position.add(horizontalVelocity);
-    horizontalVelocity.multiplyScalar(0.99);
-    player.updateMatrixWorld();
-    const capsuleInfo = player.capsuleInfo;
-    const tempBox = new THREE.Box3();
-    const tempMat = new THREE.Matrix4();
-    const tempSegment = new THREE.Line3();
-    tempBox.makeEmpty();
-    tempMat.copy(collider.matrixWorld).invert();
-    tempSegment.copy(capsuleInfo.segment);
-    tempSegment.start.applyMatrix4(player.matrixWorld).applyMatrix4(tempMat);
-    tempSegment.end.applyMatrix4(player.matrixWorld).applyMatrix4(tempMat);
-    tempBox.expandByPoint(tempSegment.start);
-    tempBox.expandByPoint(tempSegment.end);
-    tempBox.min.addScalar(-capsuleInfo.radius);
-    tempBox.max.addScalar(capsuleInfo.radius);
-    const tempVector = new THREE.Vector3();
-    const tempVector2 = new THREE.Vector3();
-    collider.geometry.boundsTree.shapecast({
-
-        intersectsBounds: box => box.intersectsBox(tempBox),
-
-        intersectsTriangle: tri => {
-
-            // check if the triangle is intersecting the capsule and adjust the
-            // capsule position if it is.
-            const triPoint = tempVector;
-            const capsulePoint = tempVector2;
-
-            const distance = tri.closestPointToSegment(tempSegment, triPoint, capsulePoint);
-            if (distance < capsuleInfo.radius) {
-
-                const depth = capsuleInfo.radius - distance;
-                const direction = capsulePoint.sub(triPoint).normalize();
-
-                tempSegment.start.addScaledVector(direction, depth);
-                tempSegment.end.addScaledVector(direction, depth);
-
-            }
-
-        }
-
-    });
-    const newPosition = tempVector;
-    newPosition.copy(tempSegment.start).applyMatrix4(collider.matrixWorld);
-
-    const deltaVector = tempVector2;
-    deltaVector.subVectors(newPosition, player.position);
-
-    playerIsOnGround = deltaVector.y > Math.abs(delta * playerVelocity.y * 0.25);
-    const offset = Math.max(0.0, deltaVector.length() - 1e-5);
-    deltaVector.normalize().multiplyScalar(offset);
-    player.position.add(deltaVector);
-    if (!playerIsOnGround) {
-
-        deltaVector.normalize();
-        playerVelocity.addScaledVector(deltaVector, -deltaVector.dot(playerVelocity));
-
-    } else {
-
-        playerVelocity.set(0, 0, 0);
-
-    }
-    camera.position.copy(player.position);
+    playerCapsule.update(delta, collider);
+    camera.position.copy(playerCapsule.position);
 
 }
 
@@ -527,14 +468,17 @@ function animate() {
 
 
     if (keys[" "]) {
-        if (playerIsOnGround) {
-            playerVelocity.y = 150.0;
+        if (playerCapsule.onGround) {
+            playerCapsule.velocity.y = 150.0;
         }
     }
 
     if (collider) {
         for (let i = 0; i < 5; i++) {
             updatePlayer(delta / 5);
+            entities.forEach(entity => {
+                entity.update(delta / 5, collider);
+            })
         }
     }
 
