@@ -2,6 +2,7 @@ import * as THREE from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70O
 
 import { PointerLockControls } from 'https://threejs.org/examples/jsm/controls/PointerLockControls.js';
 import { RoundedBoxGeometry } from 'https://threejs.org/examples/jsm/geometries/RoundedBoxGeometry.js';
+import * as SkeletonUtils from 'https://threejs.org/examples/jsm/utils/SkeletonUtils.js';
 import { GLTFLoader } from 'https://threejs.org/examples/jsm/loaders/GLTFLoader.js';
 //import { Octree } from 'https://threejs.org/examples/jsm/math/Octree.js';
 import { Capsule } from 'https://threejs.org/examples/jsm/math/Capsule.js';
@@ -43,7 +44,7 @@ import Stats from "./util/stats.js";
 import localProxy from "./util/localProxy.js";
 let camera, scene, renderer, controls, player, stats, raycaster, dirLight, collider, visualizer, mergedGeometry;
 let composer, bloomPass, boxBlur, bloomAddPass, aoPass, fogPass, smaaPass, fxaaPass, filmPass, renderPass, bloomTexture, defaultTexture;
-let playerIsOnGround, playerVelocity, horizontalVelocity, playerDirection;
+let playerIsOnGround, playerVelocity, horizontalVelocity, playerDirection, model, skeleton, mixer;
 
 let moveForward = false;
 let moveBackward = false;
@@ -53,6 +54,7 @@ let canJump = false;
 let keys = {};
 let prevTime = performance.now();
 let movement_speed = 400.0;
+let frame = 0;
 let graphicTier = localProxy.tier !== undefined ? localProxy.tier : 0;
 const bloomScene = new THREE.Scene();
 const velocity = new THREE.Vector3();
@@ -60,6 +62,7 @@ const direction = new THREE.Vector3();
 const vertex = new THREE.Vector3();
 const color = new THREE.Color();
 const clock = new THREE.Clock();
+
 
 let settings = ["Low", "Medium", "High", "Ultra"];
 const LOW = 0;
@@ -148,6 +151,9 @@ function init() {
     });
     bloomTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
 
+    // ===== load scene =====
+    GLBSpawner('glb/spawnplanet.glb', 0, -20, 0);
+
     // ===== player =====
     player = new THREE.Mesh(
         new RoundedBoxGeometry(1.0, 40.0, 1.0, 10, 5),
@@ -166,6 +172,26 @@ function init() {
     playerVelocity = new THREE.Vector3();
     horizontalVelocity = new THREE.Vector3();
     playerDirection = new THREE.Vector3();
+
+    // ===== avatar =====
+    const loader = new GLTFLoader();
+    loader.load( '../glb/y_bot.glb', function ( gltf ) {
+
+        const model1 = SkeletonUtils.clone( gltf.scene );
+
+        mixer = new THREE.AnimationMixer( model1 );
+
+        mixer.clipAction( gltf.animations[ 2 ] ).play(); // idle
+
+        model1.position.z = - 175;
+        model1.position.y = - 9
+
+        scene.add(model1);
+
+        animate();
+
+    } );
+
 
     // ===== controls =====
     controls = new PointerLockControls(camera, document.body);
@@ -206,34 +232,10 @@ function init() {
     stats = new Stats();
     stats.showPanel(0);
     document.body.appendChild(stats.dom);
-
-
 }
 
 
-function updateDirLight(size) {
-    scene.remove(dirLight.target);
-    scene.remove(dirLight);
-    dirLight.dispose();
-    dirLight.shadow.dispose();
-    dirLight = new THREE.DirectionalLight(0x8888ff, 1);
-    dirLight.position.set(90, 360, 170 * 3);
-    dirLight.castShadow = true;
-    dirLight.shadow.camera.near = 0.1;
-    dirLight.shadow.camera.far = 1000;
-    dirLight.shadow.camera.right = 400;
-    dirLight.shadow.camera.left = -400;
-    dirLight.shadow.camera.top = 400;
-    dirLight.shadow.camera.bottom = -400;
-    dirLight.shadow.mapSize.width = size;
-    dirLight.shadow.mapSize.height = size;
-    dirLight.shadow.radius = 4;
-    dirLight.shadow.bias = -0.005;
-    if (size !== 0) {
-        scene.add(dirLight);
-        scene.add(dirLight.target);
-    }
-}
+
 
 // ===== utils =====
 function onProgress(xr) { console.log((xr.loaded / xr.total) * 100) }
@@ -291,7 +293,6 @@ function GLBSpawner(path, x, y, z) {
         scene.add(visualizer);
     }, onProgress, onError);
 };
-GLBSpawner('spawnplanet.glb', 0, -20, 0);
 
 function getForwardVector() {
     camera.getWorldDirection(playerDirection);
@@ -463,11 +464,35 @@ function setGraphicsSetting(tier) {
     }
 }
 
-let frame = 0;
+function updateDirLight(size) {
+    scene.remove(dirLight.target);
+    scene.remove(dirLight);
+    dirLight.dispose();
+    dirLight.shadow.dispose();
+    dirLight = new THREE.DirectionalLight(0x8888ff, 1);
+    dirLight.position.set(90, 360, 170 * 3);
+    dirLight.castShadow = true;
+    dirLight.shadow.camera.near = 0.1;
+    dirLight.shadow.camera.far = 1000;
+    dirLight.shadow.camera.right = 400;
+    dirLight.shadow.camera.left = -400;
+    dirLight.shadow.camera.top = 400;
+    dirLight.shadow.camera.bottom = -400;
+    dirLight.shadow.mapSize.width = size;
+    dirLight.shadow.mapSize.height = size;
+    dirLight.shadow.radius = 4;
+    dirLight.shadow.bias = -0.005;
+    if (size !== 0) {
+        scene.add(dirLight);
+        scene.add(dirLight.target);
+    }
+}
 
 function animate() {
 
     requestAnimationFrame(animate);
+	
+
     stats.update();
     frame++;
     if (frame === 0) {
@@ -480,7 +505,11 @@ function animate() {
     }
 
     const delta = Math.min(clock.getDelta(), 0.1);
-
+    if(typeof mixer !== 'undefined'){
+        mixer.update( delta );
+    }
+    
+    
     if (keys[" "]) {
         if (playerIsOnGround) {
             playerVelocity.y = 150.0;
