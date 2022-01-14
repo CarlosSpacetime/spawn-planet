@@ -186,25 +186,11 @@ function init() {
     const loader = new GLTFLoader();
     loader.load('../glb/y_bot.glb', function(gltf) {
 
-        /* const model1 = SkeletonUtils.clone(gltf.scene);
-         model1.traverse(child => {
-             if (child.isMesh) {
-                 child.castShadow = true;
-                 child.receiveShadow = true;
-             }
-         })
-         mixer = new THREE.AnimationMixer(model1);
-
-         mixer.clipAction(gltf.animations[2]).play(); // idle
-
-         model1.position.z = -175;
-         model1.position.y = -9
-
-         scene.add(model1);*/
         const avatar = new Avatar(5, 27, gltf.scene, gltf.animations, scene);
         avatar.position.y = 30;
         avatar.position.z = 50;
         entities.push(avatar);
+
 
     });
 
@@ -345,6 +331,14 @@ function updatePlayer(delta) {
     }
     playerCapsule.update(delta, collider);
     camera.position.copy(playerCapsule.position);
+    entities.forEach(entity => {
+        const size = playerCapsule.radius + entity.radius;
+        if (playerCapsule.position.distanceTo(entity.position) < size) {
+            const toEntity = Math.atan2(entity.position.x - playerCapsule.position.x, entity.position.z - playerCapsule.position.z);
+            playerCapsule.position.x -= Math.sin(toEntity) * (size - playerCapsule.position.distanceTo(entity.position));
+            playerCapsule.position.z -= Math.cos(toEntity) * (size - playerCapsule.position.distanceTo(entity.position));
+        }
+    })
 
 }
 
@@ -456,9 +450,8 @@ function animate() {
         setGraphicsSetting(graphicTier);
     }
     scene.fog.needsUpdate = true;
-    if (player.position.y < -1000) {
-        playerVelocity.set(0, 0, 0);
-        player.position.set(0, 30, -30);
+    if (playerCapsule.y < -1000) {
+        playerCapsule.position.set(0, 30, -30);
     }
 
     const delta = Math.min(clock.getDelta(), 0.1);
@@ -477,7 +470,7 @@ function animate() {
         for (let i = 0; i < 5; i++) {
             updatePlayer(delta / 5);
             entities.forEach(entity => {
-                entity.update(delta / 5, collider);
+                entity.update(delta / 5, collider, playerCapsule.position, entities);
             })
         }
     }
