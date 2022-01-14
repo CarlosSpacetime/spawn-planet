@@ -184,7 +184,7 @@ function init() {
 
     // ===== avatar =====
     const loader = new GLTFLoader();
-    loader.load('../glb/y_bot.glb', function(gltf) {
+    loader.load('./glb/y_bot.glb', function(gltf) {
 
         const avatar = new Avatar(5, 27, gltf.scene, gltf.animations, scene);
         avatar.position.y = 30;
