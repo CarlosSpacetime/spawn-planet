@@ -42,11 +42,12 @@ import {
 import { MeshBVH, MeshBVHVisualizer } from './util/three-mesh-bvh.js';
 import { CapsuleEntity } from './entities/CapsuleEntity.js';
 import { Avatar } from "./entities/Avatar.js";
-import { ControlableCapsule } from './entities/ControlableCapsule.js'
+import { Player } from './entities/Player.js';
+import { StdEnv } from './StdEnv.js';
 import Stats from "./util/stats.js";
 import localProxy from "./util/localProxy.js";
-let camera, scene, renderer, controls, player, stats, raycaster, dirLight, collider, visualizer, mergedGeometry;
-let composer, bloomPass, boxBlur, bloomAddPass, aoPass, fogPass, smaaPass, fxaaPass, filmPass, renderPass, bloomTexture, defaultTexture;
+let controls, player, stats, raycaster, collider, visualizer, mergedGeometry;
+// let bloomPass, boxBlur, bloomAddPass, aoPass, fogPass, smaaPass, fxaaPass, filmPass, renderPass, bloomTexture, defaultTexture;
 let playerVelocity, playerDirection, model, skeleton, mixer;
 let entities = [];
 let moveForward = false;
@@ -78,98 +79,19 @@ const instructions = document.getElementById('instructions');
 const flyout = document.getElementById('fly-out');
 const graphics = document.getElementById("graphics");
 
+const VE = new StdEnv();
+
 init();
 
 function init() {
-    // ===== renderer =====
-    renderer = new THREE.WebGLRenderer();
-    renderer.setPixelRatio(1);
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.VSMShadowMap;
-    document.body.appendChild(renderer.domElement);
-
-    // ===== scene =====
-    scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x69e6f4);
-
-    scene.fog = new THREE.Fog(0x69e6f4, 1600, 2000);
-
-    // ===== camera =====
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
-    camera.position.y = 1.6;
-    camera.lookAt(0, 1.7, -1);
-
-    // ===== lights =====
-    const light = new THREE.HemisphereLight(0xffeeff, 0x777788, 1);
-    light.position.set(0.5, 1, 0.75);
-    scene.add(light);
-    dirLight = new THREE.DirectionalLight(0x8888ff, 1);
-    dirLight.position.set(90, 360, 170 * 3);
-    dirLight.castShadow = true;
-    dirLight.shadow.camera.near = 0.1;
-    dirLight.shadow.camera.far = 1000;
-    dirLight.shadow.camera.right = 400;
-    dirLight.shadow.camera.left = -400;
-    dirLight.shadow.camera.top = 400;
-    dirLight.shadow.camera.bottom = -400;
-    dirLight.shadow.mapSize.width = 1024;
-    dirLight.shadow.mapSize.height = 1024;
-    dirLight.shadow.radius = 4;
-    if (graphicTier === MEDIUM) {
-        dirLight.shadow.bias = -0.005;
-    } else if (graphicTier === HIGH) {
-        dirLight.shadow.bias = -0.0025;
-    } else {
-        dirLight.shadow.bias = -0.001;
-    }
-    scene.add(dirLight);
-    scene.add(dirLight.target);
-
-    // ===== shaders =====
-    composer = new EffectComposer(renderer);
-    bloomPass = new(class BloomPass extends ShaderPass {})(BloomShader);
-    boxBlur = new(class BlurPass extends ShaderPass {})(BoxBlurShader);
-    bloomAddPass = new(class AddPass extends ShaderPass {})(BloomAddShader);
-    aoPass = new ShaderPass(AOShader);
-    fogPass = new ShaderPass(FogShader);
-    fxaaPass = new ShaderPass(FXAAShader);
-    // Postprocessing gets rid of MSAA so SMAA is used instead
-    smaaPass = new SMAAPass(window.innerWidth, window.innerHeight);
-    filmPass = new FilmPass(0.05, 0, 0, false);
-    renderPass = new RenderPass(scene, camera);
-    composer.addPass(bloomPass);
-    composer.addPass(boxBlur);
-    composer.addPass(bloomAddPass);
-    composer.addPass(aoPass);
-    //composer.addPass(fogPass);
-    //composer.addPass(filmPass);
-    composer.addPass(smaaPass);
-    composer.addPass(fxaaPass);
-    composer.addPass(renderPass);
-    // Full Scene Render Target
-    defaultTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.NearestFilter
-    });
-    defaultTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
-    // Bloom Scene (Only Glowing Objects) Render Target
-    bloomTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
-        minFilter: THREE.LinearFilter,
-        magFilter: THREE.NearestFilter
-    });
-    bloomTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
+    // ===== Virtual Env =====
+    VE.init(graphicTier); 
 
     // ===== load scene =====
     GLBSpawner('glb/spawnplanet.glb', 0, -20, 0);
 
-    // ===== player =====
-    player = new ControlableCapsule();
-    scene.add(player);
-
-
     // ===== controls =====
-    controls = new PointerLockControls(camera, document.body);
+    controls = new PointerLockControls(VE.camera, document.body);
     controls.addEventListener('lock', function() {
         flyout.innerHTML = 'ESC To Return'
         instructions.style.display = 'none';
@@ -182,10 +104,10 @@ function init() {
         instructions.style.display = '';
     });
 
-    scene.add(controls.getObject());
+    VE.scene.add(controls.getObject());
 
-    const onKeyDown = function(event) { player.keys[event.key] = true; };
-    const onKeyUp = function(event) { player.keys[event.key] = false; };
+    const onKeyDown = function(event) { VE.player.keys[event.key] = true; };
+    const onKeyUp = function(event) { VE.player.keys[event.key] = false; };
 
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
@@ -201,16 +123,13 @@ function init() {
         controls.lock();
     });
 
-    setGraphicsSetting(graphicTier);
+    VE.composer.setGraphicsSetting(graphicTier, VE.renderer, VE.scene);
 
     // ===== stats =====
     stats = new Stats();
     stats.showPanel(0);
     document.body.appendChild(stats.dom);
 }
-
-
-
 
 // ===== utils =====
 function onProgress(xr) { console.log((xr.loaded / xr.total) * 100) }
@@ -240,7 +159,7 @@ function GLBSpawner(path, x, y, z) {
                 object.parent.remove(object);
             }
         });
-        scene.add(object.scene);
+        VE.scene.add(object.scene);
         let geometries = [];
         object.scene.traverse(object => {
             if (object.geometry && object.visible) {
@@ -259,193 +178,42 @@ function GLBSpawner(path, x, y, z) {
         collider.material.opacity = 0.5;
         collider.material.transparent = true;
         collider.visible = false;
-        scene.add(collider);
+        VE.scene.add(collider);
 
         visualizer = new MeshBVHVisualizer(collider, 10);
         visualizer.visible = false;
         visualizer.update();
 
-        scene.add(visualizer);
+        VE.scene.add(visualizer);
     }, onProgress, onError);
 };
 
-function setGraphicsSetting(tier) {
-    switch (tier) {
-        case ULTRA:
-            updateDirLight(2048);
-            aoPass.enabled = true;
-            smaaPass.enabled = true;
-            fxaaPass.enabled = false;
-            bloomPass.enabled = true;
-            boxBlur.enabled = true;
-            bloomAddPass.enabled = true;
-            renderPass.enabled = false;
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.VSMShadowMap;
-            scene.fog.color = new THREE.Color(0x69e6f4);
-            scene.fog.near = 1600;
-            scene.fog.far = 2000;
-            break;
-
-        case HIGH:
-            updateDirLight(1024);
-            aoPass.enabled = false;
-            smaaPass.enabled = true;
-            fxaaPass.enabled = false;
-            bloomPass.enabled = true;
-            boxBlur.enabled = true;
-            bloomAddPass.enabled = true;
-            renderPass.enabled = false;
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.VSMShadowMap;
-            scene.fog.color = new THREE.Color(0.8, 0.8, 0.8);
-            scene.fog.near = 100;
-            scene.fog.far = 1500;
-            break;
-
-        case MEDIUM:
-            updateDirLight(512);
-            aoPass.enabled = false;
-            smaaPass.enabled = false;
-            fxaaPass.enabled = true;
-            bloomPass.enabled = true;
-            boxBlur.enabled = true;
-            bloomAddPass.enabled = true;
-            renderPass.enabled = false;
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            scene.fog.color = new THREE.Color(0.8, 0.8, 0.8);
-            scene.fog.near = 100;
-            scene.fog.far = 1500;
-            break;
-
-        case LOW:
-            updateDirLight(0);
-            aoPass.enabled = false;
-            smaaPass.enabled = false;
-            fxaaPass.enabled = false;
-            bloomPass.enabled = false;
-            boxBlur.enabled = false;
-            bloomAddPass.enabled = false;
-            renderPass.enabled = true;
-            renderer.shadowMap.enabled = false;
-            scene.fog.color = new THREE.Color(0.8, 0.8, 0.8);
-            scene.fog.near = 100;
-            scene.fog.far = 1500;
-            break;
-    }
-}
-
-function updateDirLight(size) {
-    scene.remove(dirLight.target);
-    scene.remove(dirLight);
-    dirLight.dispose();
-    dirLight.shadow.dispose();
-    dirLight = new THREE.DirectionalLight(0x8888ff, 1);
-    dirLight.position.set(90, 360, 170 * 3);
-    dirLight.castShadow = true;
-    dirLight.shadow.camera.near = 0.1;
-    dirLight.shadow.camera.far = 1000;
-    dirLight.shadow.camera.right = 400;
-    dirLight.shadow.camera.left = -400;
-    dirLight.shadow.camera.top = 400;
-    dirLight.shadow.camera.bottom = -400;
-    dirLight.shadow.mapSize.width = size;
-    dirLight.shadow.mapSize.height = size;
-    dirLight.shadow.radius = 4;
-    if (graphicTier === MEDIUM) {
-        dirLight.shadow.bias = -0.005;
-    } else if (graphicTier === HIGH) {
-        dirLight.shadow.bias = -0.0025;
-    } else {
-        dirLight.shadow.bias = -0.001;
-    }
-    if (size !== 0) {
-        scene.add(dirLight);
-        scene.add(dirLight.target);
-    }
-}
 
 function animate() {
 
     requestAnimationFrame(animate);
 
+    VE.update();
 
     stats.update();
-    frame++;
-    if (frame === 0) {
-        setGraphicsSetting(graphicTier);
-    }
-    scene.fog.needsUpdate = true;
-    if (player.position.y < -1000) {
-        player.position.set(0, 30, -30);
-    }
 
     const delta = Math.min(clock.getDelta(), 0.1);
-    if (typeof mixer !== 'undefined') {
-        mixer.update(delta);
-    }
 
     if (collider) {
         for (let i = 0; i < 5; i++) {
-            player.update(delta / 5, camera, collider);
-            camera.position.copy(player.position);
+            VE.player.update(delta / 5, VE.camera, collider);
+            VE.camera.position.copy(VE.player.position);
         }
     }
-
-    const time = performance.now();
-    dirLight.position.x = camera.position.x + 90;
-    dirLight.position.y = 360;
-    dirLight.position.z = camera.position.z + 170 * 3;
-    dirLight.target.position.x = camera.position.x;
-    dirLight.target.position.y = 0;
-    dirLight.target.position.z = camera.position.z;
-    dirLight.shadow.camera.updateProjectionMatrix();
-    dirLight.updateMatrix();
-
-    prevTime = time;
-
-    // renderer.render(scene, camera);
-    if (graphicTier > LOW) {
-        renderer.setRenderTarget(defaultTexture);
-        renderer.clear();
-        renderer.render(scene, camera);
-        renderer.setRenderTarget(bloomTexture);
-        renderer.clear();
-        renderer.render(bloomScene, camera);
-    }
-    bloomPass.uniforms["sceneDiffuse"].value = defaultTexture.texture;
-    bloomPass.uniforms["bloomDiffuse"].value = bloomTexture.texture;
-    bloomPass.uniforms["sceneDepth"].value = defaultTexture.depthTexture;
-    bloomPass.uniforms["bloomDepth"].value = bloomTexture.depthTexture;
-    boxBlur.uniforms["resolution"].value = new THREE.Vector2(window.innerWidth, window.innerHeight);
-    bloomAddPass.uniforms["sceneDiffuse"].value = defaultTexture.texture;
-    bloomAddPass.uniforms["bloomAmt"].value = 1.0;
-    fogPass.uniforms["sceneDepth"].value = defaultTexture.depthTexture;
-    camera.updateMatrixWorld();
-    fogPass.uniforms["projectionMatrixInv"].value = camera.projectionMatrixInverse;
-    fogPass.uniforms["viewMatrixInv"].value = camera.matrixWorld;
-    fogPass.uniforms["cameraPos"].value = camera.position;
-    fogPass.uniforms["time"].value = performance.now() / 1000;
-    aoPass.uniforms["sceneDepth"].value = defaultTexture.depthTexture;
-    aoPass.uniforms["projectionMatrixInv"].value = camera.projectionMatrixInverse;
-    aoPass.uniforms["viewMatrixInv"].value = camera.matrixWorld;
-    aoPass.uniforms["viewMat"].value = camera.matrixWorldInverse;
-    aoPass.uniforms["projMat"].value = camera.projectionMatrix;
-    aoPass.uniforms["cameraPos"].value = camera.position;
-    aoPass.uniforms["time"].value = performance.now() / 1000;
-    aoPass.uniforms["resolution"].value = new THREE.Vector2(window.innerWidth, window.innerHeight);
-    renderer.setRenderTarget(null);
-    renderer.clear();
-    // Render the full postprocessing stack
-    composer.render();
 }
-requestAnimationFrame(animate);
+animate();
+
 graphics.innerHTML = "Graphics: " + settings[graphicTier];
 graphics.onclick = () => {
     graphicTier += 1;
     graphicTier %= settings.length;
     localProxy.tier = graphicTier;
     graphics.innerHTML = "Graphics: " + settings[graphicTier];
-    setGraphicsSetting(graphicTier);
+    VE.composer.setGraphicsSetting(graphicTier, VE.renderer, VE.scene);
+    VE.setShadowLightTier(graphicTier);
 }

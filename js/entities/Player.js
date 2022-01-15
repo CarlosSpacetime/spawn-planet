@@ -7,6 +7,10 @@ class Player extends ControlableCapsule {
     }
     update(delta, camera, collider){
         super.update(delta, camera, collider);
+
+        if (this.position.y < -1000) {
+            this.position.set(0, 30, -30);
+        }
     }
 }
 
