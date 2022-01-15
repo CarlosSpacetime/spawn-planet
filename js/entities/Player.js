@@ -4,7 +4,9 @@ import { Vector3 } from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70
 class Player extends ControlableCapsule {
     constructor() {
         super();
+        this.keys = {};
     }
+    
     update(delta, camera, collider){
         super.update(delta, camera, collider);
 

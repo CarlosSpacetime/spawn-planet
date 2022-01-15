@@ -5,6 +5,8 @@ import { DefaultDirectionalLight } from "./render/DefaultDirectionalLight.js"
 import { DefaultComposer } from "./render/DefaultComposer.js"
 import { Player } from './entities/Player.js';
 
+import localProxy from "./util/localProxy.js";
+
 const LOW = 0;
 const MEDIUM = 1;
 const HIGH = 2;
@@ -36,6 +38,7 @@ animate();
 Other usages should be like:
     to change the graphic tier:
     VE.setGraphicsSetting(graphicTier);
+    VE.increaseGraphicSettings()
 
     for events on control lock and unlock
     VE.controls.addEventListener('lock', function() { .. do stuff });
@@ -44,8 +47,8 @@ Other usages should be like:
 
 class StdEnv {
     constructor() {  
-        this.init = function (graphicTier) {
-            this.graphicTier = graphicTier;
+        this.init = function () {
+            this.graphicTier = localProxy.tier !== undefined ? localProxy.tier : 0;
 
             // ===== renderer =====
             this.renderer = new THREE.WebGLRenderer();
@@ -70,8 +73,8 @@ class StdEnv {
             light.position.set(0.5, 1, 0.75);
             this.scene.add(light);
 
-            if(graphicTier !== LOW){
-                shadowLight = new DefaultDirectionalLight(graphicTier);
+            if(this.graphicTier !== LOW){
+                shadowLight = new DefaultDirectionalLight(this.graphicTier);
                 this.scene.add(shadowLight);
                 this.scene.add(shadowLight.target);
             }
@@ -82,6 +85,26 @@ class StdEnv {
             // ===== player =====
             this.player = new Player();
             this.scene.add(this.player);
+
+            // ===== controls =====
+            this.controls = new PointerLockControls(this.camera, document.body);
+            this.scene.add(this.controls.getObject());
+
+            document.addEventListener('keydown', (event) => {
+                this.player.keys[event.key] = true;
+            });
+            document.addEventListener('keyup', (event) => { 
+                this.player.keys[event.key] = false; 
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.keyCode === 32 && e.target === document.body) {
+                    e.preventDefault();
+                }
+            });
+
+            // ===== graphic settings =====
+            this.setGraphicsSetting(this.graphicTier);
         
         } // -- end init
 
@@ -98,6 +121,19 @@ class StdEnv {
                 this.scene.add(shadowLight);
                 this.scene.add(shadowLight.target);
             }
+        }
+
+        this.setGraphicsSetting = function (graphicTier) {
+            this.graphicTier = graphicTier;
+            this.setShadowLightTier(graphicTier);
+            this.composer.setGraphicsSetting(graphicTier, this.renderer, this. scene);
+        }
+
+        this.increaseGraphicSettings = function () {
+            this.graphicTier += 1;
+            this.graphicTier %= 4;
+            localProxy.tier = this.graphicTier;
+            this.setGraphicsSetting(this.graphicTier)
         }
     } // -- end constructor
 
@@ -116,6 +152,7 @@ class StdEnv {
             this.renderer.render(this.scene, this.camera);
             this.renderer.setRenderTarget(this.composer.bloomTexture);
             this.renderer.clear();
+            // renderer.render(bloomScene, camera); 
         }
         
         this.renderer.setRenderTarget(null);
