@@ -18,11 +18,6 @@ class CapsuleEntity extends Entity {
         const capsuleInfo = this.info;
         this.velocity.y += this.onGround ? 0 : delta * this.gravity;
         this.position.addScaledVector(this.velocity, delta);
-        /*this.position.y += this.velocity.y * delta;
-        this.position.x += this.velocity.x;
-        this.position.z += this.velocity.z;
-        this.velocity.x *= 0.99;
-        this.velocity.z *= 0.99;*/
         this.position.add(this.horizontalVelocity);
         this.horizontalVelocity.multiplyScalar(0.99);
         this.updateMatrixWorld();

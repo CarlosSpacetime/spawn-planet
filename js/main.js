@@ -42,6 +42,7 @@ import {
 import { MeshBVH, MeshBVHVisualizer } from './util/three-mesh-bvh.js';
 import { CapsuleEntity } from './entities/CapsuleEntity.js';
 import { Avatar } from "./entities/Avatar.js";
+import { ControlableCapsule } from './entities/ControlableCapsule.js'
 import Stats from "./util/stats.js";
 import localProxy from "./util/localProxy.js";
 let camera, scene, renderer, controls, player, stats, raycaster, dirLight, collider, visualizer, mergedGeometry;
@@ -56,9 +57,6 @@ let canJump = false;
 let keys = {};
 let prevTime = performance.now();
 let movement_speed = 400.0;
-let playerCapsule = new CapsuleEntity(5, 27);
-playerCapsule.position.y = 50;
-playerCapsule.position.z = -30;
 let frame = 0;
 let graphicTier = localProxy.tier !== undefined ? localProxy.tier : 0;
 const bloomScene = new THREE.Scene();
@@ -166,33 +164,8 @@ function init() {
     GLBSpawner('glb/spawnplanet.glb', 0, -20, 0);
 
     // ===== player =====
-    player = new THREE.Mesh(
-        new RoundedBoxGeometry(1.0, 27, 1.0, 10, 5),
-        new THREE.MeshStandardMaterial()
-    );
-    player.geometry.translate(0, -27, 0);
-    player.capsuleInfo = {
-        radius: 5,
-        segment: new THREE.Line3(new THREE.Vector3(), new THREE.Vector3(0, -27, 0.0))
-    };
-    player.visible = false;
-    player.position.y = 50;
-    player.position.z = -30;
+    player = new ControlableCapsule();
     scene.add(player);
-
-    playerDirection = new THREE.Vector3();
-
-    // ===== avatar =====
-    const loader = new GLTFLoader();
-    loader.load('glb/y_bot.glb', function(gltf) {
-
-        const avatar = new Avatar(5, 27, gltf.scene, gltf.animations, scene);
-        avatar.position.y = 30;
-        avatar.position.z = 50;
-        entities.push(avatar);
-
-
-    });
 
 
     // ===== controls =====
@@ -211,8 +184,8 @@ function init() {
 
     scene.add(controls.getObject());
 
-    const onKeyDown = function(event) { keys[event.key] = true; };
-    const onKeyUp = function(event) { keys[event.key] = false; };
+    const onKeyDown = function(event) { player.keys[event.key] = true; };
+    const onKeyUp = function(event) { player.keys[event.key] = false; };
 
     document.addEventListener('keydown', onKeyDown);
     document.addEventListener('keyup', onKeyUp);
@@ -295,52 +268,6 @@ function GLBSpawner(path, x, y, z) {
         scene.add(visualizer);
     }, onProgress, onError);
 };
-
-function getForwardVector() {
-    camera.getWorldDirection(playerDirection);
-    playerDirection.y = 0;
-    playerDirection.normalize();
-
-    return playerDirection;
-}
-
-function getSideVector() {
-    camera.getWorldDirection(playerDirection);
-    playerDirection.y = 0;
-    playerDirection.normalize();
-    playerDirection.cross(camera.up);
-
-    return playerDirection;
-}
-
-function updatePlayer(delta) {
-    if (keys["w"]) {
-        playerCapsule.horizontalVelocity.add(getForwardVector().multiplyScalar(1 * delta));
-    }
-
-    if (keys["s"]) {
-        playerCapsule.horizontalVelocity.add(getForwardVector().multiplyScalar(-1 * delta));
-    }
-
-    if (keys["a"]) {
-        playerCapsule.horizontalVelocity.add(getSideVector().multiplyScalar(-1 * delta));
-    }
-
-    if (keys["d"]) {
-        playerCapsule.horizontalVelocity.add(getSideVector().multiplyScalar(1 * delta));
-    }
-    playerCapsule.update(delta, collider);
-    camera.position.copy(playerCapsule.position);
-    entities.forEach(entity => {
-        const size = playerCapsule.radius + entity.radius;
-        if (playerCapsule.position.distanceTo(entity.position) < size) {
-            const toEntity = Math.atan2(entity.position.x - playerCapsule.position.x, entity.position.z - playerCapsule.position.z);
-            playerCapsule.position.x -= Math.sin(toEntity) * (size - playerCapsule.position.distanceTo(entity.position));
-            playerCapsule.position.z -= Math.cos(toEntity) * (size - playerCapsule.position.distanceTo(entity.position));
-        }
-    })
-
-}
 
 function setGraphicsSetting(tier) {
     switch (tier) {
@@ -450,8 +377,8 @@ function animate() {
         setGraphicsSetting(graphicTier);
     }
     scene.fog.needsUpdate = true;
-    if (playerCapsule.y < -1000) {
-        playerCapsule.position.set(0, 30, -30);
+    if (player.position.y < -1000) {
+        player.position.set(0, 30, -30);
     }
 
     const delta = Math.min(clock.getDelta(), 0.1);
@@ -459,19 +386,10 @@ function animate() {
         mixer.update(delta);
     }
 
-
-    if (keys[" "]) {
-        if (playerCapsule.onGround) {
-            playerCapsule.velocity.y = 150.0;
-        }
-    }
-
     if (collider) {
         for (let i = 0; i < 5; i++) {
-            updatePlayer(delta / 5);
-            entities.forEach(entity => {
-                entity.update(delta / 5, collider, playerCapsule.position, entities);
-            })
+            player.update(delta / 5, camera, collider);
+            camera.position.copy(player.position);
         }
     }
 
