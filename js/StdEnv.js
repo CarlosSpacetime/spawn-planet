@@ -8,7 +8,7 @@ import { MeshBVH, MeshBVHVisualizer } from './util/three-mesh-bvh.js';
 import { DefaultDirectionalLight } from "./render/DefaultDirectionalLight.js"
 import { DefaultComposer } from "./render/DefaultComposer.js"
 import { Player } from './entities/Player.js';
-
+import { Avatar } from './entities/Avatar.js';
 import localProxy from "./util/localProxy.js";
 
 const LOW = 0;
@@ -145,7 +145,16 @@ class StdEnv {
 
                         scene.add(visualizer);
                     }, onProgress, onError);
+                    this.entities = [];
+                    loader.load('glb/y_bot.glb', (gltf) => {
 
+                        const avatar = new Avatar(5, 27, gltf.scene, gltf.animations, scene);
+                        avatar.position.y = 30;
+                        avatar.position.z = 50;
+                        this.entities.push(avatar);
+
+
+                    });
                     // ===== player =====
                     this.player = new Player();
                     this.scene.add(this.player);
@@ -208,8 +217,11 @@ class StdEnv {
         const delta = Math.min(clock.getDelta(), 0.1);
         if (collider) {
             for (let i = 0; i < 5; i++) {
-                this.player.update(delta / 5, this.camera, collider);
+                this.player.update(delta / 5, this.camera, collider, this.entities);
                 this.camera.position.copy(this.player.position);
+                this.entities.forEach(entity => {
+                    entity.update(delta / 5, collider, this.player.position, this.entities);
+                })
             }
         }
 
@@ -225,7 +237,7 @@ class StdEnv {
             this.renderer.render(this.scene, this.camera);
             this.renderer.setRenderTarget(this.composer.bloomTexture);
             this.renderer.clear();
-            // renderer.render(bloomScene, camera); 
+            this.renderer.render(bloomScene, this.camera);
         }
 
         this.renderer.setRenderTarget(null);

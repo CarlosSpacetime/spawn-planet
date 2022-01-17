@@ -24,7 +24,6 @@ class Avatar extends CapsuleEntity {
         action.play();
         this.scene = scene;
         this.scene.add(this.model);
-        //this.model.scale.set(size, size, size);
     }
     update(delta, bvh, target, entities) {
         super.update(delta, bvh);

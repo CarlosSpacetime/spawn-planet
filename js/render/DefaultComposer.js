@@ -50,11 +50,11 @@ class DefaultComposer extends EffectComposer {
         this.defaultTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
 
         // Bloom Scene (Only Glowing Objects) Render Target
-        bloomTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
+        this.bloomTexture = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, {
             minFilter: THREE.LinearFilter,
             magFilter: THREE.NearestFilter
         });
-        bloomTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
+        this.bloomTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
 
         this.setGraphicsSetting = function(tier, renderer, scene) {
             switch (tier) {
@@ -119,9 +119,9 @@ class DefaultComposer extends EffectComposer {
 
     update(camera) {
         bloomPass.uniforms["sceneDiffuse"].value = this.defaultTexture.texture;
-        bloomPass.uniforms["bloomDiffuse"].value = bloomTexture.texture;
+        bloomPass.uniforms["bloomDiffuse"].value = this.bloomTexture.texture;
         bloomPass.uniforms["sceneDepth"].value = this.defaultTexture.depthTexture;
-        bloomPass.uniforms["bloomDepth"].value = bloomTexture.depthTexture;
+        bloomPass.uniforms["bloomDepth"].value = this.bloomTexture.depthTexture;
         boxBlur.uniforms["resolution"].value = new THREE.Vector2(window.innerWidth, window.innerHeight);
         bloomAddPass.uniforms["sceneDiffuse"].value = this.defaultTexture.texture;
         bloomAddPass.uniforms["bloomAmt"].value = 1.0;

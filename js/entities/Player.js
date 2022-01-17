@@ -6,13 +6,21 @@ class Player extends ControlableCapsule {
         super();
         this.keys = {};
     }
-    
-    update(delta, camera, collider){
+
+    update(delta, camera, collider, entities) {
         super.update(delta, camera, collider);
 
         if (this.position.y < -1000) {
             this.position.set(0, 30, -30);
         }
+        entities.forEach(entity => {
+            const size = this.radius + entity.radius;
+            if (this.position.distanceTo(entity.position) < size) {
+                const toEntity = Math.atan2(entity.position.x - this.position.x, entity.position.z - this.position.z);
+                this.position.x -= Math.sin(toEntity) * (size - this.position.distanceTo(entity.position));
+                this.position.z -= Math.cos(toEntity) * (size - this.position.distanceTo(entity.position));
+            }
+        })
     }
 }
 
