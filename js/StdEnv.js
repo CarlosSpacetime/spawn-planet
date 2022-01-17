@@ -148,7 +148,11 @@ class StdEnv {
                     this.entities = [];
                     loader.load('glb/y_bot.glb', (gltf) => {
 
-                        const avatar = new Avatar(5, 27, gltf.scene, gltf.animations, scene);
+                        const avatar = new Avatar(5, 27, gltf.scene, {
+                            "idle": gltf.animations[2],
+                            "walk": gltf.animations[1],
+                            "run": gltf.animations[3],
+                        }, scene);
                         avatar.position.y = 30;
                         avatar.position.z = 50;
                         this.entities.push(avatar);

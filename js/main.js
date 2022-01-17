@@ -17,7 +17,7 @@ init();
 
 function init() {
     // ===== Virtual Env =====
-    VE.init('glb/spawnplanet.glb', 0, -20, 0); 
+    VE.init('glb/spawnplanet.glb', 0, -20, 0);
 
     // ===== controls =====
     VE.controls.addEventListener('lock', function() {
@@ -37,7 +37,7 @@ function init() {
     });
 
     graphics.innerHTML = "Graphics: " + settings[VE.graphicTier];
-    graphics.addEventListener('click', function () {
+    graphics.addEventListener('click', function() {
         VE.increaseGraphicSettings();
         graphics.innerHTML = "Graphics: " + settings[VE.graphicTier];
     });
@@ -48,14 +48,19 @@ function init() {
     document.body.appendChild(stats.dom);
 }
 
+if (!window.requestPostAnimationFrame) {
+    window.requestPostAnimationFrame = function(task) {
+        requestAnimationFrame(() => {
+            setTimeout(task, 0);
+        });
+    }
+}
 
 function animate() {
-    requestAnimationFrame(animate);
+    requestPostAnimationFrame(animate);
 
     VE.update();
 
     stats.update();
 }
-animate();
-
-
+requestPostAnimationFrame(animate);
