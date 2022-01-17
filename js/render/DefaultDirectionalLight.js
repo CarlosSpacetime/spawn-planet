@@ -6,7 +6,7 @@ const HIGH = 2;
 const ULTRA = 3;
 
 class DefaultDirectionalLight extends DirectionalLight {
-    constructor(graphicTier){
+    constructor(graphicTier) {
         super(0x8888ff, 1);
 
         // default values
@@ -23,21 +23,24 @@ class DefaultDirectionalLight extends DirectionalLight {
         switch (graphicTier) {
             case ULTRA:
                 this.shadow.mapSize.width = 2048;
+                this.shadow.mapSize.height = 2048;
                 this.shadow.bias = -0.001;
                 break;
 
             case HIGH:
                 this.shadow.mapSize.width = 1024;
+                this.shadow.mapSize.height = 1024;
                 this.shadow.bias = -0.0025;
                 break;
 
             case MEDIUM:
                 this.shadow.mapSize.width = 512;
+                this.shadow.mapSize.height = 512;
                 this.shadow.bias = -0.005;
                 break;
         }
     }
-    update (camera) {
+    update(camera) {
         this.position.x = camera.position.x + 90;
         this.position.y = 360;
         this.position.z = camera.position.z + 170 * 3;

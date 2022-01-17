@@ -21,7 +21,7 @@ const ULTRA = 3;
 let bloomPass, boxBlur, bloomAddPass, aoPass, fogPass, smaaPass, fxaaPass, filmPass, renderPass, bloomTexture;
 
 class DefaultComposer extends EffectComposer {
-    constructor (renderer, scene, camera) {
+    constructor(renderer, scene, camera) {
         super(renderer);
 
         bloomPass = new(class BloomPass extends ShaderPass {})(BloomShader);
@@ -56,7 +56,7 @@ class DefaultComposer extends EffectComposer {
         });
         bloomTexture.depthTexture = new THREE.DepthTexture(window.innerWidth, window.innerHeight, THREE.FloatType);
 
-        this.setGraphicsSetting = function (tier, renderer, scene) {
+        this.setGraphicsSetting = function(tier, renderer, scene) {
             switch (tier) {
                 case ULTRA:
                     aoPass.enabled = true;
@@ -67,7 +67,6 @@ class DefaultComposer extends EffectComposer {
                     bloomAddPass.enabled = true;
                     renderPass.enabled = false;
                     renderer.shadowMap.enabled = true;
-                    renderer.shadowMap.type = THREE.VSMShadowMap;
                     scene.fog.color = new THREE.Color(0x69e6f4);
                     scene.fog.near = 1600;
                     scene.fog.far = 2000;
@@ -82,7 +81,6 @@ class DefaultComposer extends EffectComposer {
                     bloomAddPass.enabled = true;
                     renderPass.enabled = false;
                     renderer.shadowMap.enabled = true;
-                    renderer.shadowMap.type = THREE.VSMShadowMap;
                     scene.fog.color = new THREE.Color(0.8, 0.8, 0.8);
                     scene.fog.near = 100;
                     scene.fog.far = 1500;
@@ -97,7 +95,6 @@ class DefaultComposer extends EffectComposer {
                     bloomAddPass.enabled = true;
                     renderPass.enabled = false;
                     renderer.shadowMap.enabled = true;
-                    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
                     scene.fog.color = new THREE.Color(0.8, 0.8, 0.8);
                     scene.fog.near = 100;
                     scene.fog.far = 1500;
@@ -119,8 +116,8 @@ class DefaultComposer extends EffectComposer {
             }
         }
     }
-    
-    update (camera) {
+
+    update(camera) {
         bloomPass.uniforms["sceneDiffuse"].value = this.defaultTexture.texture;
         bloomPass.uniforms["bloomDiffuse"].value = bloomTexture.texture;
         bloomPass.uniforms["sceneDepth"].value = this.defaultTexture.depthTexture;
@@ -142,8 +139,6 @@ class DefaultComposer extends EffectComposer {
         aoPass.uniforms["cameraPos"].value = camera.position;
         aoPass.uniforms["time"].value = performance.now() / 1000;
         aoPass.uniforms["resolution"].value = new THREE.Vector2(window.innerWidth, window.innerHeight);
-        
-        this.render();
     }
 }
 
