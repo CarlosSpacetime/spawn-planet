@@ -246,7 +246,7 @@ var AOShader = {
               }
             depth_Diff /= count;
             depth_Diff = max(min(depth_Diff, 0.05), 0.0);
-            gl_FragColor = vec4(mix(texel.rgb * vec3(1.0 - 20.0 * depth_Diff), vec3(0.8, 0.8, 0.8), fogFactor), 1.0);
+            gl_FragColor = vec4(mix(texel.rgb * vec3(1.0 - 20.0 * depth_Diff), vec3(207.0 / 255.0, 175.0 / 255.0, 228.0 / 255.0), fogFactor), 1.0);
 
 		}`
 

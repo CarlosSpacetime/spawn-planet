@@ -8,6 +8,9 @@ class Controller {
         });
     }
     play(anim, time = 0.25) {
+        if (anim === this.current) {
+            return;
+        }
         if (this.current !== "none") {
             this.animations[this.current].fadeOut(time);
         }

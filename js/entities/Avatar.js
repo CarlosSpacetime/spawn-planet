@@ -2,6 +2,7 @@ import { CapsuleEntity } from "./CapsuleEntity.js";
 import * as THREE from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70OdXl97VF/mode=imports/optimized/three.js';
 import * as SkeletonUtils from 'https://threejs.org/examples/jsm/utils/SkeletonUtils.js';
 import Controller from "./animation/Controller.js";
+import { IdleGoal } from "./goals/IdleGoal.js";
 
 function angleDifference(angle1, angle2) {
     const diff = ((angle2 - angle1 + Math.PI) % (Math.PI * 2)) - Math.PI;
@@ -20,16 +21,32 @@ class Avatar extends CapsuleEntity {
         });
         this.mixer = new THREE.AnimationMixer(this.model);
         this.animations = animations;
-        /*const action = this.mixer.clipAction(this.animations.walk);
-        action.time = Math.random() * action._clip.duration;
-        action.play();*/
         this.controller = new Controller(this.mixer, this.animations);
-        this.controller.play("idle");
         this.scene = scene;
         this.scene.add(this.model);
+        this.state = null;
+        this.goal = null;
+        this.setGoal(new IdleGoal({}));
+    }
+    setState(state) {
+        if (this.state) {
+            this.state.deinit(this);
+        }
+        this.state = state;
+        this.state.init(this);
+    }
+    setGoal(goal) {
+        if (this.goal) {
+            this.goal.deinit(this);
+        }
+        this.goal = goal;
+        this.goal.init(this);
     }
     update(delta, bvh, target, entities) {
         super.update(delta, bvh);
+
+        this.goal.update(this);
+        this.state.update(this);
         this.model.position.copy(this.position);
         this.model.position.y -= this.size + this.radius;
         this.mixer.update(delta);

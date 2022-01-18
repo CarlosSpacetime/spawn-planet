@@ -59,7 +59,7 @@ class StdEnv {
                     this.graphicTier = localProxy.tier !== undefined ? localProxy.tier : 0;
 
                     // ===== renderer =====
-                    this.renderer = new THREE.WebGLRenderer();
+                    this.renderer = new THREE.WebGLRenderer({ alpha: true });
                     this.renderer.setPixelRatio(1);
                     this.renderer.setSize(window.innerWidth, window.innerHeight);
                     this.renderer.shadowMap.enabled = true;
