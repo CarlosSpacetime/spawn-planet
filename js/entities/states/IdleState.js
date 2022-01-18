@@ -4,7 +4,7 @@ class IdleState extends State {
         super(memory);
     }
     update(agent) {
-        agent.controller.play("idle");
+        agent.controller.play("idle", 0.75);
     }
 }
 export { IdleState };

@@ -7,7 +7,7 @@ class Controller {
             this.animations[anim] = this.mixer.clipAction(clip);
         });
     }
-    play(anim, time = 0.25) {
+    play(anim, time = 0.5) {
         if (anim === this.current) {
             return;
         }

@@ -92,12 +92,12 @@ class StdEnv {
                     this.composer = new DefaultComposer(this.renderer, this.scene, this.camera);
 
                     // ===== load the terrain =====
-                    function onProgress(xr) { console.log((xr.loaded / xr.total) * 100) }
+                    function onProgress(xr) { /* console.log((xr.loaded / xr.total) * 100)*/ }
 
                     function onError(e) { console.log(e) };
 
                     const loader = new GLTFLoader();
-                    loader.load(terrainPath, function(object) {
+                    loader.load(terrainPath, (object) => {
                         object.scene.position.set(x, y, z);
                         object.scene.traverse(object => {
                             if (object.isMesh) {
@@ -142,25 +142,29 @@ class StdEnv {
                         const visualizer = new MeshBVHVisualizer(collider, 10);
                         visualizer.visible = false;
                         visualizer.update();
-
                         scene.add(visualizer);
+                        loader.load('glb/y_bot.glb', (gltf) => {
+                            for (let i = 0; i < 10; i++) {
+                                const avatar = new Avatar(5, 30, gltf.scene, {
+                                    "idle": gltf.animations[2],
+                                    "walk": gltf.animations[1],
+                                    "run": gltf.animations[3],
+                                }, {
+                                    scene,
+                                    entities: this.entities,
+                                    collider
+                                });
+                                avatar.position.x = 500 * Math.random() - 250;
+                                avatar.position.y = 30;
+                                avatar.position.z = 50 + 500 * Math.random();
+                                this.entities.push(avatar);
+                            }
+                        });
                     }, onProgress, onError);
                     this.entities = [];
-                    loader.load('glb/y_bot.glb', (gltf) => {
-
-                        const avatar = new Avatar(5, 27, gltf.scene, {
-                            "idle": gltf.animations[2],
-                            "walk": gltf.animations[1],
-                            "run": gltf.animations[3],
-                        }, scene);
-                        avatar.position.y = 30;
-                        avatar.position.z = 50;
-                        this.entities.push(avatar);
-
-
-                    });
                     // ===== player =====
                     this.player = new Player();
+                    window.player = this.player;
                     this.scene.add(this.player);
 
                     // ===== controls =====
@@ -219,12 +223,14 @@ class StdEnv {
 
     update() {
         const delta = Math.min(clock.getDelta(), 0.1);
+        const frustum = new THREE.Frustum();
+        frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
         if (collider) {
             for (let i = 0; i < 5; i++) {
                 this.player.update(delta / 5, this.camera, collider, this.entities);
                 this.camera.position.copy(this.player.position);
                 this.entities.forEach(entity => {
-                    entity.update(delta / 5, collider, this.player.position, this.entities);
+                    entity.update(delta / 5, frustum);
                 })
             }
         }
