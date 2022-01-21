@@ -11,7 +11,7 @@ class Player extends ControlableCapsule {
         super.update(delta, camera, collider);
 
         if (this.position.y < -1000) {
-            this.position.set(0, 30, -30);
+            this.position.set(0, 40, -30);
         }
         entities.forEach(entity => {
             const size = this.radius + entity.radius;
