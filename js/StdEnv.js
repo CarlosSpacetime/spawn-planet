@@ -1,5 +1,5 @@
 import * as THREE from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70OdXl97VF/mode=imports/optimized/three.js';
-import { PointerLockControls } from 'https://threejs.org/examples/jsm/controls/PointerLockControls.js';
+import { PointerLockControls } from './util/PointerLockControls.js';
 
 import { GLTFLoader } from 'https://threejs.org/examples/jsm/loaders/GLTFLoader.js';
 import * as BufferGeometryUtils from 'https://cdn.skypack.dev/three@0.135.0/examples/jsm/utils/BufferGeometryUtils.js';
@@ -9,6 +9,7 @@ import { DefaultDirectionalLight } from "./render/DefaultDirectionalLight.js"
 import { DefaultComposer } from "./render/DefaultComposer.js"
 import { Player } from './entities/Player.js';
 import { Avatar } from './entities/Avatar.js';
+import { PlayerAvatar } from './entities/PlayerAvatar.js';
 import localProxy from "./util/localProxy.js";
 
 const LOW = 0;
@@ -76,6 +77,9 @@ class StdEnv {
                     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
                     this.camera.position.y = 1.6;
                     this.camera.lookAt(0, 1.7, -1);
+                    this.dummyCamera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+                    this.dummyCamera.position.y = 1.6;
+                    this.dummyCamera.lookAt(0, 1.7, -1);
 
                     // ===== lights =====
                     const light = new THREE.HemisphereLight(0xffeeff, 0x777788, 1);
@@ -108,10 +112,13 @@ class StdEnv {
                                     object.material.map.anisotropy = 16;
                                     object.material.map.needsUpdate = true;
                                 }
-                                const cloned = object.clone();
+                                const cloned = new THREE.Mesh(object.geometry, object.material);
                                 object.getWorldPosition(cloned.position);
+                                //object.updateMatrixWorld();
                                 if (object.material.emissive && (object.material.emissive.r > 0 || object.material.emissive.g > 0 || object.material.color.b > 0)) {
-                                    bloomScene.add(cloned);
+                                    /* object.updateMatrixWorld();
+                                     cloned.matrix.copy(object.matrixWorld);*/
+                                    bloomScene.attach(cloned);
                                 }
                             }
                             if (object.isLight) {
@@ -159,6 +166,15 @@ class StdEnv {
                                 avatar.position.z = 50 + 500 * Math.random();
                                 this.entities.push(avatar);
                             }
+                            this.playerAvatar = new PlayerAvatar(2.5, 30, gltf.scene, {
+                                "idle": gltf.animations[2],
+                                "walk": gltf.animations[1],
+                                "run": gltf.animations[3],
+                                "jump": gltf.animations[4],
+                                "fall": gltf.animations[5]
+                            }, {
+                                scene
+                            });
                         });
                     }, onProgress, onError);
                     this.entities = [];
@@ -168,10 +184,20 @@ class StdEnv {
                     this.scene.add(this.player);
 
                     // ===== controls =====
-                    this.controls = new PointerLockControls(this.camera, document.body);
+                    this.controls = new PointerLockControls(this.dummyCamera, document.body);
+                    this.controls.sensitivityY = 0.002;
                     this.scene.add(this.controls.getObject());
 
                     document.addEventListener('keydown', (event) => {
+                        if (event.key === "v") {
+                            if (this.targetControlVector === this.thirdPersonControls) {
+                                this.targetControlVector = this.fpsControls;
+                                this.controls.sensitivityY = -0.002;
+                            } else {
+                                this.targetControlVector = this.thirdPersonControls;
+                                this.controls.sensitivityY = 0.002;
+                            }
+                        }
                         this.player.keys[event.key] = true;
                     });
                     document.addEventListener('keyup', (event) => {
@@ -218,8 +244,13 @@ class StdEnv {
                 localProxy.tier = this.graphicTier;
                 this.setGraphicsSetting(this.graphicTier)
             }
+            this.cameraPosition = new THREE.Vector3();
+            this.cameraTarget = new THREE.Vector3();
+            this.fpsControls = new THREE.Vector4(0.01, Math.PI - 0.01, 0.01, 1);
+            this.thirdPersonControls = new THREE.Vector4(Math.PI / 3, Math.PI / 2 - 0.01, 40, 0.2);
+            this.controlVector = this.thirdPersonControls.clone();
+            this.targetControlVector = this.thirdPersonControls;
         } // -- end constructor
-
 
     update() {
         const delta = Math.min(clock.getDelta(), 0.1);
@@ -227,14 +258,42 @@ class StdEnv {
         frustum.setFromProjectionMatrix(new THREE.Matrix4().multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
         if (collider) {
             for (let i = 0; i < 5; i++) {
-                this.player.update(delta / 5, this.camera, collider, this.entities);
+                this.player.update(delta / 5, this.dummyCamera, collider, this.entities);
                 this.camera.position.copy(this.player.position);
                 this.entities.forEach(entity => {
                     entity.update(delta / 5, frustum);
                 })
             }
+            const controlVector = this.controlVector;
+            this.controls.minPolarAngle = controlVector.x;
+            this.controls.maxPolarAngle = controlVector.y;
+            //this.camera.position.y += 10;
+            this.camera.position.copy(this.player.position);
+            const dir = this.dummyCamera.getWorldDirection(new THREE.Vector3());
+            this.camera.position.add(dir.multiplyScalar(controlVector.z));
+            this.camera.lookAt(this.player.position);
+            const invMat = new THREE.Matrix4();
+            const raycaster = new THREE.Raycaster(this.player.position.clone(), this.camera.position.clone().sub(this.player.position.clone()).normalize());
+            invMat.copy(collider.matrixWorld).invert();
+            raycaster.ray.applyMatrix4(invMat);
+            const hit = collider.geometry.boundsTree.raycastFirst(raycaster.ray);
+            if (hit) {
+                this.camera.position.copy(this.player.position);
+                const dir = this.dummyCamera.getWorldDirection(new THREE.Vector3());
+                this.camera.position.add(dir.multiplyScalar(Math.min(hit.point.distanceTo(this.player.position), controlVector.z * 1.25) * 0.8));
+                this.camera.lookAt(this.player.position);
+            }
+            this.cameraPosition.lerp(this.camera.position, controlVector.w);
+            this.cameraTarget.lerp(this.player.position, controlVector.w);
+            this.camera.position.copy(this.cameraPosition);
+            this.camera.lookAt(this.cameraTarget);
+            this.controlVector.lerp(this.targetControlVector, 0.1);
         }
-
+        if (this.playerAvatar) {
+            this.playerAvatar.position.copy(player.position);
+            this.playerAvatar.update(delta, frustum, this.dummyCamera);
+            this.playerAvatar.opacity = (this.controlVector.z - 0.01) / (40 - 0.01);
+        }
         this.scene.fog.needsUpdate = true;
 
         if (this.graphicTier !== LOW) {

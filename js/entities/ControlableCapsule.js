@@ -16,7 +16,7 @@ class ControlableCapsule extends CapsuleEntity {
             camera.getWorldDirection(this.playerDirection);
             this.playerDirection.y = 0;
             this.playerDirection.normalize();
-
+            this.playerDirection.multiplyScalar(-1);
             return this.playerDirection;
         }
 
@@ -25,9 +25,10 @@ class ControlableCapsule extends CapsuleEntity {
             this.playerDirection.y = 0;
             this.playerDirection.normalize();
             this.playerDirection.cross(camera.up);
-
+            this.playerDirection.multiplyScalar(-1);
             return this.playerDirection;
         }
+        this.jumped = 0;
     }
 
     update(delta, camera, collider) {
@@ -46,8 +47,15 @@ class ControlableCapsule extends CapsuleEntity {
         if (this.keys["d"]) {
             this.horizontalVelocity.add(this.getSideVector(camera).multiplyScalar(1 * delta));
         }
+        this.jumped -= 0.2;
         if (this.keys[" "]) {
-            if (this.onGround) { this.velocity.y = 150.0; }
+            if (this.onGround && this.jumped <= 0) {
+                this.jumped = 20;
+            }
+        }
+        if (this.jumped > 0 && this.jumped < 1) {
+            this.velocity.y = 150.0;
+            this.jumped = 0;
         }
         super.update(delta, collider);
     }

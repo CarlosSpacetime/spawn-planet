@@ -1,5 +1,6 @@
 import { ControlableCapsule } from "../entities/ControlableCapsule.js";
 import { Vector3 } from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70OdXl97VF/mode=imports/optimized/three.js';
+import * as THREE from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70OdXl97VF/mode=imports/optimized/three.js';
 
 class Player extends ControlableCapsule {
     constructor() {
@@ -20,7 +21,22 @@ class Player extends ControlableCapsule {
                 this.position.x -= Math.sin(toEntity) * (size - this.position.distanceTo(entity.position));
                 this.position.z -= Math.cos(toEntity) * (size - this.position.distanceTo(entity.position));
             }
-        })
+        });
+        const invMat = new THREE.Matrix4();
+        const raycaster = new THREE.Raycaster(this.position, new THREE.Vector3(0, -1, 0));
+        invMat.copy(collider.matrixWorld).invert();
+        raycaster.ray.applyMatrix4(invMat);
+        const hit = collider.geometry.boundsTree.raycastFirst(raycaster.ray);
+        if (hit) {
+            hit.point.applyMatrix4(collider.matrixWorld);
+            if (hit.point.distanceTo(this.position) < this.size + this.radius + 25) {
+                this.groundBelow = true;
+            } else {
+                this.groundBelow = false;
+            }
+        } else {
+            this.groundBelow = false;
+        }
     }
 }
 
