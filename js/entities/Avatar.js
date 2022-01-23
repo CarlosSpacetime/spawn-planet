@@ -42,6 +42,7 @@ class Avatar extends CapsuleEntity {
         }));
         this.box = new THREE.Box3();
         this.updateBox();
+        this.controller.play("idle", 0);
         /* const helper = new THREE.Box3Helper(this.box, 0xffff00);
          this.scene.add(helper);*/
     }
