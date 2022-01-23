@@ -151,7 +151,7 @@ class StdEnv {
                         visualizer.update();
                         scene.add(visualizer);
                         loader.load('glb/y_bot.glb', (gltf) => {
-                            for (let i = 0; i < 10; i++) {
+                            for (let i = 0; i < 5; i++) {
                                 const avatar = new Avatar(5, 30, gltf.scene, {
                                     "idle": gltf.animations[2],
                                     "walk": gltf.animations[1],
@@ -161,9 +161,9 @@ class StdEnv {
                                     entities: this.entities,
                                     collider
                                 });
-                                avatar.position.x = 500 * Math.random() - 250;
+                                avatar.position.x = 400 * Math.random() - 200;
                                 avatar.position.y = 30;
-                                avatar.position.z = 50 + 500 * Math.random();
+                                avatar.position.z = 500 * Math.random();
                                 this.entities.push(avatar);
                             }
                             this.playerAvatar = new PlayerAvatar(2.5, 30, gltf.scene, {

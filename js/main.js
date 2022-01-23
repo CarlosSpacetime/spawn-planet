@@ -43,9 +43,9 @@ function init() {
     });
 
     // ===== stats =====
-    stats = new Stats();
-    stats.showPanel(0);
-    document.body.appendChild(stats.dom);
+    // stats = new Stats();
+    // stats.showPanel(0);
+    // document.body.appendChild(stats.dom);
 }
 
 if (!window.requestPostAnimationFrame) {
@@ -61,6 +61,6 @@ function animate() {
 
     VE.update();
 
-    stats.update();
+    // stats.update();
 }
 requestPostAnimationFrame(animate);
