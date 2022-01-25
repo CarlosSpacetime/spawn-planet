@@ -3,7 +3,7 @@ import { Vector3 } from 'https://cdn.skypack.dev/pin/three@v0.135.0-pjGUcRG9Xt70
 
 class ControlableCapsule extends CapsuleEntity {
     constructor() {
-        super(2.5, 30);
+        super(5, 30);
 
         this.playerDirection = new Vector3();
         this.keys = {};

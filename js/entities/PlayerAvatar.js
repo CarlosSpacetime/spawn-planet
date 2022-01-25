@@ -47,7 +47,8 @@ class PlayerAvatar extends THREE.Object3D {
         this.delta = delta;
         this.updateBox();
         this.model.position.copy(this.position);
-        this.model.position.y -= this.size + this.radius;
+        // this.model.position.y -= (this.size) / 2 - this.radius / 2;
+        this.model.position.y -= this.size / 2 + 1.25;
         const dir = fpsCamera.getWorldDirection(new THREE.Vector3());
         if (this.positionChange) {
             const viewDir = Math.atan2(dir.x, dir.z) + Math.PI;

@@ -67,7 +67,9 @@ class Avatar extends CapsuleEntity {
         this.state.update(this);
         this.updateBox();
         this.model.position.copy(this.position);
-        this.model.position.y -= this.size + this.radius;
+        //this.model.position.y -= (this.size) / 2 - this.radius / 2;
+        //this.model.position.y -= this.size / 2 + this.radius / 2;
+        this.model.position.y -= this.size / 2 + 1.25;
         if (!frustum.intersectsBox(this.box)) {
             this.model.visible = false;
         } else {

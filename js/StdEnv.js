@@ -150,30 +150,39 @@ class StdEnv {
                         visualizer.visible = false;
                         visualizer.update();
                         scene.add(visualizer);
-                        loader.load('glb/y_bot.glb', (gltf) => {
-                            for (let i = 0; i < 5; i++) {
-                                const avatar = new Avatar(5, 30, gltf.scene, {
-                                    "idle": gltf.animations[2],
-                                    "walk": gltf.animations[1],
-                                    "run": gltf.animations[3],
-                                }, {
-                                    scene,
-                                    entities: this.entities,
-                                    collider
+                        loader.load('glb/animation.glb', (gltf) => {
+                            loader.load('glb/xbot.glb', (xbot) => {
+                                loader.load('glb/ybot.glb', (ybot) => {
+                                    loader.load('glb/vanguard.glb', (vanguard) => {
+                                        xbot.scene.scale.set(0.2, 0.2, 0.2);
+                                        ybot.scene.scale.set(0.2, 0.2, 0.2);
+                                        vanguard.scene.scale.set(0.2, 0.2, 0.2);
+                                        for (let i = 0; i < 10; i++) {
+                                            const avatar = new Avatar(5, 30, Math.random() < 0.5 ? xbot.scene : ybot.scene, {
+                                                "idle": gltf.animations[2],
+                                                "walk": gltf.animations[1],
+                                                "run": gltf.animations[3],
+                                            }, {
+                                                scene,
+                                                entities: this.entities,
+                                                collider
+                                            });
+                                            avatar.position.x = 400 * Math.random() - 200;
+                                            avatar.position.y = 30;
+                                            avatar.position.z = 500 * Math.random();
+                                            this.entities.push(avatar);
+                                        }
+                                        this.playerAvatar = new PlayerAvatar(2.5, 30, vanguard.scene, {
+                                            "idle": gltf.animations[2],
+                                            "walk": gltf.animations[1],
+                                            "run": gltf.animations[3],
+                                            "jump": gltf.animations[4],
+                                            "fall": gltf.animations[5]
+                                        }, {
+                                            scene
+                                        });
+                                    });
                                 });
-                                avatar.position.x = 400 * Math.random() - 200;
-                                avatar.position.y = 30;
-                                avatar.position.z = 500 * Math.random();
-                                this.entities.push(avatar);
-                            }
-                            this.playerAvatar = new PlayerAvatar(2.5, 30, gltf.scene, {
-                                "idle": gltf.animations[2],
-                                "walk": gltf.animations[1],
-                                "run": gltf.animations[3],
-                                "jump": gltf.animations[4],
-                                "fall": gltf.animations[5]
-                            }, {
-                                scene
                             });
                         });
                     }, onProgress, onError);
