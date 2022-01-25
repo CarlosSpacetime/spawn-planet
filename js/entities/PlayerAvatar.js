@@ -76,10 +76,10 @@ class PlayerAvatar extends THREE.Object3D {
                 this.controller.play("fall", 0.25);
             } else {
                 if ((this.controller.current !== "jump" || this.jumpTick > 1) && !player.keys[" "]) {
-                    if (changeMag < 0.33) {
-                        this.controller.play("idle");
-                    } else {
+                    if (player.keys["w"] || player.keys["s"] || player.keys["a"] || player.keys["d"]) {
                         this.controller.play("walk");
+                    } else {
+                        this.controller.play("idle");
                     }
                 }
             }

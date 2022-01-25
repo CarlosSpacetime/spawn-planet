@@ -29,23 +29,24 @@ class ControlableCapsule extends CapsuleEntity {
             return this.playerDirection;
         }
         this.jumped = 0;
+        this.friction = 0.975;
     }
 
     update(delta, camera, collider) {
         if (this.keys["w"]) {
-            this.horizontalVelocity.add(this.getForwardVector(camera).multiplyScalar(1 * delta));
+            this.horizontalVelocity.add(this.getForwardVector(camera).multiplyScalar(2 * delta));
         }
 
         if (this.keys["s"]) {
-            this.horizontalVelocity.add(this.getForwardVector(camera).multiplyScalar(-1 * delta));
+            this.horizontalVelocity.add(this.getForwardVector(camera).multiplyScalar(-2 * delta));
         }
 
         if (this.keys["a"]) {
-            this.horizontalVelocity.add(this.getSideVector(camera).multiplyScalar(-1 * delta));
+            this.horizontalVelocity.add(this.getSideVector(camera).multiplyScalar(-2 * delta));
         }
 
         if (this.keys["d"]) {
-            this.horizontalVelocity.add(this.getSideVector(camera).multiplyScalar(1 * delta));
+            this.horizontalVelocity.add(this.getSideVector(camera).multiplyScalar(2 * delta));
         }
         this.jumped -= 0.2;
         if (this.keys[" "]) {

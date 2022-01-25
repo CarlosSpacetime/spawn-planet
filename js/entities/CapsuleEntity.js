@@ -12,6 +12,7 @@ class CapsuleEntity extends Entity {
             radius: radius,
             segment: new THREE.Line3(new THREE.Vector3(), new THREE.Vector3(0, -size, 0.0))
         };
+        this.friction = 0.99;
     }
     update(delta, bvh) {
         const collider = bvh;
@@ -19,7 +20,7 @@ class CapsuleEntity extends Entity {
         this.velocity.y += this.onGround ? 0 : delta * this.gravity;
         this.position.addScaledVector(this.velocity, delta);
         this.position.add(this.horizontalVelocity);
-        this.horizontalVelocity.multiplyScalar(0.99);
+        this.horizontalVelocity.multiplyScalar(this.friction);
         this.updateMatrixWorld();
         const tempBox = new THREE.Box3();
         const tempMat = new THREE.Matrix4();
