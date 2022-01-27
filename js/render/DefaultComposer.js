@@ -4,7 +4,7 @@ import { EffectComposer } from 'https://cdn.skypack.dev/three@0.136.0/examples/j
 import { RenderPass } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/postprocessing/RenderPass.js';
 import { ShaderPass } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/postprocessing/ShaderPass.js';
 import { FilmPass } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/postprocessing/FilmPass.js';
-import { SMAAPass } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/postprocessing/SMAAPass.js';
+import { SMAAPass } from 'https://unpkg.com/three@0.137.0/examples/jsm/postprocessing/SMAAPass.js';
 import { FXAAShader } from 'https://cdn.skypack.dev/three@0.136.0/examples/jsm/shaders/FXAAShader.js';
 
 import { BloomShader } from "./BloomShader.js";

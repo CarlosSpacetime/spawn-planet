@@ -6,11 +6,16 @@ class Controller {
         Object.entries(animations).forEach(([anim, clip]) => {
             this.animations[anim] = this.mixer.clipAction(clip);
         });
+        this.lastChange = performance.now() - 250;
     }
     play(anim, time = 0.5) {
         if (anim === this.current) {
             return;
         }
+        if (performance.now() - this.lastChange < 250) {
+            return;
+        }
+        this.lastChange = performance.now();
         if (this.current !== "none") {
             this.animations[this.current].fadeOut(time);
         }
