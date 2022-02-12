@@ -17,7 +17,7 @@ init();
 
 function init() {
     // ===== Virtual Env =====
-    VE.init('glb/spawnplanet.glb', 0, -20, 0);
+    VE.init('glb/spawnplanet.glb', 'glb/vanguard.glb', 0, -20, 0);
 
     // ===== controls =====
     VE.controls.addEventListener('lock', function() {

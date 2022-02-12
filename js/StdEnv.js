@@ -56,7 +56,7 @@ Other usages should be like:
 
 class StdEnv {
     constructor() {
-            this.init = function(terrainPath, x, y, z) {
+            this.init = function(terrainPath, avatarPath, x, y, z) {
                     this.graphicTier = localProxy.tier !== undefined ? localProxy.tier : 0;
 
                     // ===== renderer =====
@@ -151,27 +151,27 @@ class StdEnv {
                         visualizer.update();
                         scene.add(visualizer);
                         loader.load('glb/animation.glb', (gltf) => {
-                            loader.load('glb/xbot.glb', (xbot) => {
-                                loader.load('glb/ybot.glb', (ybot) => {
-                                    loader.load('glb/vanguard.glb', (vanguard) => {
-                                        xbot.scene.scale.set(0.2, 0.2, 0.2);
-                                        ybot.scene.scale.set(0.2, 0.2, 0.2);
+                            // loader.load('glb/xbot.glb', (xbot) => {
+                            //     loader.load('glb/ybot.glb', (ybot) => {
+                                    loader.load(avatarPath, (vanguard) => {
+                                        // xbot.scene.scale.set(0.2, 0.2, 0.2);
+                                        // ybot.scene.scale.set(0.2, 0.2, 0.2);
                                         vanguard.scene.scale.set(0.2, 0.2, 0.2);
-                                        for (let i = 0; i < 10; i++) {
-                                            const avatar = new Avatar(5, 30, Math.random() < 0.5 ? xbot.scene : ybot.scene, {
-                                                "idle": gltf.animations[2],
-                                                "walk": gltf.animations[1],
-                                                "run": gltf.animations[3],
-                                            }, {
-                                                scene,
-                                                entities: this.entities,
-                                                collider
-                                            });
-                                            avatar.position.x = 400 * Math.random() - 200;
-                                            avatar.position.y = 30;
-                                            avatar.position.z = 500 * Math.random();
-                                            this.entities.push(avatar);
-                                        }
+                                        // for (let i = 0; i < 10; i++) {
+                                        //     const avatar = new Avatar(5, 30, Math.random() < 0.5 ? xbot.scene : ybot.scene, {
+                                        //         "idle": gltf.animations[2],
+                                        //         "walk": gltf.animations[1],
+                                        //         "run": gltf.animations[3],
+                                        //     }, {
+                                        //         scene,
+                                        //         entities: this.entities,
+                                        //         collider
+                                        //     });
+                                        //     avatar.position.x = 400 * Math.random() - 200;
+                                        //     avatar.position.y = 30;
+                                        //     avatar.position.z = 500 * Math.random();
+                                        //     this.entities.push(avatar);
+                                        // }
                                         this.playerAvatar = new PlayerAvatar(2.5, 30, vanguard.scene, {
                                             "idle": gltf.animations[2],
                                             "walk": gltf.animations[1],
@@ -182,8 +182,8 @@ class StdEnv {
                                             scene
                                         });
                                     });
-                                });
-                            });
+                            //     });
+                            // });
                         });
                     }, onProgress, onError);
                     this.entities = [];
